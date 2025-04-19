@@ -9,10 +9,10 @@ export function copyAsMarkdown() {
 
   // --- State ---
   let selectorActive = false;
-  let currentHoverElement: Element | null = null;
-  let selectedElement: Element | null = null;
+  let currentHoverElement: HTMLElement | null = null;
+  let selectedElement: HTMLElement | null = null;
   let copyButton: HTMLButtonElement | null = null;
-  const originalStyles = new WeakMap<Element, { outline: string; cursor: string }>(); // Stores original outline/cursor for elements
+  const originalStyles = new WeakMap<HTMLElement, { outline: string; cursor: string }>();
   let turndownService: TurndownService | null = null;
 
   // === Visibility Checks ===
@@ -24,7 +24,7 @@ export function copyAsMarkdown() {
    * @param {Node} node The node to check.
    * @returns {boolean} True if the element is hoverable/selectable.
    */
-  function isElementHoverable(node) {
+  function isElementHoverable(node: Node): boolean {
     // --- Visibility Check (similar to old isElementVisibleForCopy) ---
     if (!node) return false;
 
@@ -33,7 +33,8 @@ export function copyAsMarkdown() {
     if (nodeType !== Node.ELEMENT_NODE && nodeType !== Node.TEXT_NODE) return false;
 
     if (nodeType === Node.ELEMENT_NODE) {
-      const tagName = node.tagName.toUpperCase();
+      const element = node as Element;
+      const tagName = element.tagName.toUpperCase();
       if (
         tagName === 'SCRIPT' ||
         tagName === 'STYLE' ||
@@ -45,7 +46,7 @@ export function copyAsMarkdown() {
         return false;
       }
 
-      const style = window.getComputedStyle(node);
+      const style = window.getComputedStyle(element);
       if (
         style.display === 'none' ||
         style.visibility === 'hidden' ||
@@ -55,15 +56,15 @@ export function copyAsMarkdown() {
         return false;
       }
 
-      const rect = node.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
-        if (tagName === 'IMG' || node.children.length === 0) {
+        if (tagName === 'IMG' || element.children.length === 0) {
           return false;
         }
       }
 
       // --- User Select Check (Specific to Hoverable) ---
-      const userSelect = style.userSelect || style.webkitUserSelect || style.mozUserSelect || style.msUserSelect;
+      const userSelect = style.userSelect || style.webkitUserSelect;
       if (userSelect === 'none') {
         return false;
       }
@@ -77,20 +78,18 @@ export function copyAsMarkdown() {
    * @param {Element} element The element to check.
    * @returns {string} The computed user-select value (e.g., 'none', 'auto').
    */
-  function getUserSelectValue(element) {
+  function getUserSelectValue(element: Element): string {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
     try {
       const style = window.getComputedStyle(element);
       return (
         style.getPropertyValue('user-select') ||
         style.userSelect ||
-        style.getPropertyValue('-webkit-user-select') ||
-        style.getPropertyValue('-moz-user-select') ||
-        style.getPropertyValue('-ms-user-select') ||
+        style.webkitUserSelect ||
         ''
       ).trim();
-    } catch (err) {
-      console.warn('CopyAsMarkdown: Error getting userSelect value:', err);
+    } catch (err: unknown) {
+      console.warn('CopyAsMarkdown: Error getting userSelect value:', err instanceof Error ? err.message : err);
       return '';
     }
   }
@@ -101,7 +100,7 @@ export function copyAsMarkdown() {
    * Stores the original outline and cursor style of an element.
    * @param {Element} element The element whose style is to be stored.
    */
-  function storeOriginalStyle(element) {
+  function storeOriginalStyle(element: HTMLElement): void {
     if (!originalStyles.has(element)) {
       originalStyles.set(element, {
         outline: element.style.outline || '',
@@ -116,7 +115,7 @@ export function copyAsMarkdown() {
    * @param {string} outlineStyle The CSS value for the outline.
    * @param {string} [cursorStyle='pointer'] The CSS value for the cursor.
    */
-  function applyStyle(element, outlineStyle, cursorStyle = 'pointer') {
+  function applyStyle(element: HTMLElement, outlineStyle: string, cursorStyle = 'pointer'): void {
     storeOriginalStyle(element);
     element.style.outline = outlineStyle;
     element.style.cursor = cursorStyle;
@@ -126,18 +125,20 @@ export function copyAsMarkdown() {
    * Restores the original outline and cursor style of an element.
    * @param {Element | null} element The element whose style is to be restored.
    */
-  function restoreStyle(element) {
+  function restoreStyle(element: HTMLElement | null): void {
     if (!element || !originalStyles.has(element)) return;
 
     const styles = originalStyles.get(element);
-    element.style.outline = styles.outline;
-    element.style.cursor = styles.cursor;
+    if (styles) {
+      element.style.outline = styles.outline;
+      element.style.cursor = styles.cursor;
 
-    // Clean up inline styles if they were originally empty
-    if (!element.style.outline) element.style.removeProperty('outline');
-    if (!element.style.cursor) element.style.removeProperty('cursor');
+      // Clean up inline styles if they were originally empty
+      if (!element.style.outline) element.style.removeProperty('outline');
+      if (!element.style.cursor) element.style.removeProperty('cursor');
 
-    originalStyles.delete(element);
+      originalStyles.delete(element);
+    }
   }
 
   // === Turndown Setup & Rules ===
@@ -145,7 +146,7 @@ export function copyAsMarkdown() {
   /**
    * Initializes the global `turndownService` instance with specific rules.
    */
-  function initializeTurndownService() {
+  function initializeTurndownService(): void {
     if (turndownService) {
       console.log('CopyAsMarkdown: Turndown service already initialized.');
       return;
@@ -181,8 +182,8 @@ export function copyAsMarkdown() {
       // Directly use the imported plugin
       turndownService.use(gfm);
       console.log('CopyAsMarkdown: GFM plugin applied successfully.');
-    } catch (initError) {
-      console.error('CopyAsMarkdown: Error during TurndownService initialization:', initError);
+    } catch (initError: unknown) {
+      console.error('CopyAsMarkdown: Error during TurndownService initialization:', initError instanceof Error ? initError.message : initError);
       turndownService = null; // Ensure service is null if init failed
       throw initError; // Re-throw the error to be caught by the caller
     }
@@ -193,22 +194,23 @@ export function copyAsMarkdown() {
    * and detect language, while respecting preprocessing markers.
    * @param {TurndownService} service The Turndown service instance.
    */
-  function addPreElementRule(service) {
+  function addPreElementRule(service: TurndownService): void {
     service.addRule('preservePreCode', {
-      filter: node => node.nodeName === 'PRE',
+      filter: (node): boolean => (node as HTMLElement).nodeName === 'PRE',
 
-      replacement: (content, node) => {
+      replacement: (content: string, nodeUntyped: unknown): string => {
+        const node = nodeUntyped as HTMLElement;
         // Helper to check if a node should be processed (not marked as skipped)
-        const shouldProcessNode = currentNode => {
+        const shouldProcessNode = (currentNode: Node): boolean => {
           return !(
             currentNode.nodeType === Node.ELEMENT_NODE &&
-            currentNode.hasAttribute &&
-            currentNode.hasAttribute('data-cam-skip')
+            (currentNode as Element).hasAttribute &&
+            (currentNode as Element).hasAttribute('data-cam-skip')
           ); // Use specific attribute
         };
 
         // Helper to recursively get text, skipping marked nodes and adding newlines based on markers
-        const getTextFromVisibleNodes = currentNode => {
+        const getTextFromVisibleNodes = (currentNode: Node | null): string => {
           let text = '';
           if (!currentNode) return text;
 
@@ -217,19 +219,20 @@ export function copyAsMarkdown() {
           }
 
           if (currentNode.nodeType === Node.ELEMENT_NODE) {
-            if (!shouldProcessNode(currentNode)) {
+            const element = currentNode as HTMLElement;
+            if (!shouldProcessNode(element)) {
               return ''; // Skip node marked with data-cam-skip
             }
 
             // Check for line break marker *before* processing children
             // We will add the newline *after* processing children based on this flag
-            const hasLineBreakMarker = currentNode.hasAttribute('data-cam-linebreak');
-            const isBrTag = currentNode.tagName === 'BR'; // BR tags are special cases
+            const hasLineBreakMarker = element.hasAttribute('data-cam-linebreak');
+            const isBrTag = element.tagName === 'BR'; // BR tags are special cases
 
             // Recursively process children
-            if (currentNode.childNodes && currentNode.childNodes.length > 0) {
-              for (let i = 0; i < currentNode.childNodes.length; i++) {
-                text += getTextFromVisibleNodes(currentNode.childNodes[i]);
+            if (element.childNodes && element.childNodes.length > 0) {
+              for (let i = 0; i < element.childNodes.length; i++) {
+                text += getTextFromVisibleNodes(element.childNodes[i]);
               }
             }
 
@@ -269,11 +272,11 @@ export function copyAsMarkdown() {
    * with the 'data-cam-skip' attribute during preprocessing.
    * @param {TurndownService} service The Turndown service instance.
    */
-  function addSkipMarkedElementsRule(service) {
+  function addSkipMarkedElementsRule(service: TurndownService): void {
     service.addRule('skipMarkedDataCamSkip', {
-      filter: node => node.nodeType === Node.ELEMENT_NODE && node.hasAttribute && node.hasAttribute('data-cam-skip'), // Use specific attribute
+      filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute('data-cam-skip'),
       // Replacement returns empty string, effectively removing the element
-      replacement: () => '',
+      replacement: (): string => '',
     });
   }
 
@@ -282,12 +285,11 @@ export function copyAsMarkdown() {
    * as invisible ('data-cam-invisible') during preprocessing.
    * @param {TurndownService} service The Turndown service instance.
    */
-  function addSkipInvisibleRule(service) {
+  function addSkipInvisibleRule(service: TurndownService): void {
     service.addRule('skipInvisible', {
-      filter: node =>
-        node.nodeType === Node.ELEMENT_NODE && node.hasAttribute && node.hasAttribute('data-cam-invisible'),
+      filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute('data-cam-invisible'),
       // Replacement returns empty string, effectively removing the element
-      replacement: () => '',
+      replacement: (): string => '',
     });
   }
 
@@ -296,12 +298,13 @@ export function copyAsMarkdown() {
    * attribute is converted to an absolute URL in the generated Markdown.
    * @param {TurndownService} service The Turndown service instance.
    */
-  function addAbsoluteImageRule(service) {
+  function addAbsoluteImageRule(service: TurndownService): void {
     service.addRule('absoluteImages', {
       filter: 'img',
-      replacement: function (content, node) {
-        const alt = node.getAttribute('alt') || '';
-        let src = node.getAttribute('src') || '';
+      replacement: function (content: string, nodeUntyped: unknown): string {
+        const node = nodeUntyped as HTMLImageElement;
+        const alt = node.alt || '';
+        let src = node.src || '';
 
         if (!src) {
           // If there's no src, don't output an image tag
@@ -317,8 +320,8 @@ export function copyAsMarkdown() {
           try {
             const absoluteUrl = new URL(src, document.location.href).href;
             src = absoluteUrl;
-          } catch (e) {
-            console.warn(`CopyAsMarkdown: Could not convert relative src "${src}" to absolute:`, e);
+          } catch (e: unknown) {
+            console.warn(`CopyAsMarkdown: Could not convert relative src "${src}" to absolute:`, e instanceof Error ? e.message : e);
             // Optionally return something else, or just the original src
             // For now, let's proceed with the original (likely broken) src
             // Or return empty string if conversion fails?
@@ -340,12 +343,13 @@ export function copyAsMarkdown() {
    * Skips special protocols like mailto:, tel:, javascript:.
    * @param {TurndownService} service The Turndown service instance.
    */
-  function addAbsoluteLinkRule(service) {
+  function addAbsoluteLinkRule(service: TurndownService): void {
     service.addRule('absoluteLinks', {
       filter: 'a',
-      replacement: function (content, node) {
-        let href = node.getAttribute('href') || '';
-        const title = node.getAttribute('title') || '';
+      replacement: function (content: string, nodeUntyped: unknown): string {
+        const node = nodeUntyped as HTMLAnchorElement;
+        let href = node.href || '';
+        const title = node.title || '';
 
         if (!href) {
           // If there's no href, just return the content (like a span)
@@ -353,7 +357,7 @@ export function copyAsMarkdown() {
         }
 
         // Check for special protocols to leave untouched
-        const isSpecialProtocol = /^(mailto|tel|javascript|data):/i.test(href);
+        const isSpecialProtocol = /^(mailto|tel|javascript|data):/i.test(node.protocol);
 
         // Check if the href is already absolute
         const isAbsolute = href.startsWith('http:') || href.startsWith('https:') || href.startsWith('//');
@@ -363,8 +367,8 @@ export function copyAsMarkdown() {
           try {
             const absoluteUrl = new URL(href, document.location.href).href;
             href = absoluteUrl;
-          } catch (e) {
-            console.warn(`CopyAsMarkdown: Could not convert relative href "${href}" to absolute:`, e);
+          } catch (e: unknown) {
+            console.warn(`CopyAsMarkdown: Could not convert relative href "${href}" to absolute:`, e instanceof Error ? e.message : e);
             // Proceed with the original (likely broken) href in case of error
           }
         }
@@ -384,7 +388,7 @@ export function copyAsMarkdown() {
    * @param {string} className The class string to parse.
    * @returns {string} The detected language or an empty string.
    */
-  function extractLanguageFromClass(className) {
+  function extractLanguageFromClass(className: string | null | undefined): string {
     if (!className) return '';
     const match = className.match(/language-(\S+)|lang-(\S+)/);
     return match ? match[1] || match[2] || '' : '';
@@ -396,12 +400,12 @@ export function copyAsMarkdown() {
    * @param {number} maxDepth The maximum number of parent levels to check.
    * @returns {string} The detected language or an empty string.
    */
-  function findLanguageInParents(element, maxDepth) {
+  function findLanguageInParents(element: Element | null, maxDepth: number): string {
     // Safety check: If the starting element is null or undefined, return immediately.
     if (!element) {
       return '';
     }
-    let currentElement = element.parentElement;
+    let currentElement: Element | null = element.parentElement;
     for (let i = 0; i < maxDepth && currentElement; i++) {
       const language = extractLanguageFromClass(currentElement.className);
       if (language) {
@@ -423,7 +427,7 @@ export function copyAsMarkdown() {
    * @param {Element} preNode The <pre> element.
    * @returns {string} The detected language name or an empty string.
    */
-  function detectCodeLanguage(preNode) {
+  function detectCodeLanguage(preNode: HTMLElement): string {
     // 1. Check <pre> itself
     let language = extractLanguageFromClass(preNode.className);
     if (language) {
@@ -461,7 +465,7 @@ export function copyAsMarkdown() {
    * @param {Element} element The root element to preprocess.
    * @returns {boolean} Returns true if preprocessing should continue for children, false otherwise.
    */
-  function preprocessElement(element) {
+  function preprocessElement(element: Element): boolean {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
 
     // --- 1. Skip Check (user-select: none) ---
@@ -508,7 +512,7 @@ export function copyAsMarkdown() {
 
     // --- 3. Line Break Check (only if visible and not skipped) ---
     const display = style.display; // Already have style from above
-    const isBlockLike =
+    const isBlockLike: boolean =
       [
         'block',
         'flex',
@@ -529,7 +533,7 @@ export function copyAsMarkdown() {
 
     // --- 4. Recurse into Children ---
     if (element.children && element.children.length > 0) {
-      Array.from(element.children).forEach(preprocessElement);
+      Array.from(element.children).forEach(child => preprocessElement(child as Element));
     }
     return true; // Indicate children were processed (or element is a leaf)
   }
@@ -539,7 +543,7 @@ export function copyAsMarkdown() {
    * 'data-cam-linebreak') from an element and its descendants.
    * @param {Element} element The root element to clean up.
    */
-  function removePreprocessingMarkers(element) {
+  function removePreprocessingMarkers(element: Element): void {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
 
     if (element.hasAttribute('data-cam-skip')) {
@@ -554,7 +558,7 @@ export function copyAsMarkdown() {
 
     // Recursively process children
     if (element.children && element.children.length > 0) {
-      Array.from(element.children).forEach(removePreprocessingMarkers);
+      Array.from(element.children).forEach(child => removePreprocessingMarkers(child as Element));
     }
   }
 
@@ -565,7 +569,7 @@ export function copyAsMarkdown() {
    * @returns {Promise<string>} A promise that resolves with the generated Markdown.
    * @throws {Error} If Turndown fails to load or conversion fails.
    */
-  async function copyElementAsMarkdown(elementToCopy: Element) {
+  async function copyElementAsMarkdown(elementToCopy: Element): Promise<string> {
     if (!elementToCopy) {
       throw new Error('No element selected for copying.');
     }
@@ -587,8 +591,8 @@ export function copyAsMarkdown() {
       // 2. Convert the element's outerHTML using Turndown
       // Turndown uses the 'data-cam-skip' attribute via the rules
       markdown = turndownService.turndown(elementToCopy.outerHTML);
-    } catch (conversionError) {
-      console.error('CopyAsMarkdown: Turndown conversion failed:', conversionError);
+    } catch (conversionError: unknown) {
+      console.error('CopyAsMarkdown: Turndown conversion failed:', conversionError instanceof Error ? conversionError.message : conversionError);
       throw new Error('Markdown conversion failed.'); // Rethrow or handle
     } finally {
       // 3. Clean up the markers from the original element regardless of success/failure
@@ -599,8 +603,8 @@ export function copyAsMarkdown() {
     try {
       await navigator.clipboard.writeText(markdown);
       return markdown; // Resolve with the markdown content
-    } catch (clipboardError) {
-      console.error('CopyAsMarkdown: Failed to copy to clipboard:', clipboardError);
+    } catch (clipboardError: unknown) {
+      console.error('CopyAsMarkdown: Failed to copy to clipboard:', clipboardError instanceof Error ? clipboardError.message : clipboardError);
       throw new Error('Failed to write to clipboard.');
     }
   }
@@ -611,7 +615,7 @@ export function copyAsMarkdown() {
    * Creates and displays the "Copy as Markdown" button near the target element.
    * @param {Element} targetElement The element near which to place the button.
    */
-  function createCopyButton(targetElement) {
+  function createCopyButton(targetElement: HTMLElement): void {
     removeCopyButton(); // Ensure only one button exists
 
     copyButton = document.createElement('button');
@@ -630,7 +634,7 @@ export function copyAsMarkdown() {
       fontSize: '12px',
       fontFamily: 'sans-serif', // Ensure basic font
       lineHeight: '1.2',
-    });
+    } as Partial<CSSStyleDeclaration>);
 
     // Position the button near the top-right corner of the element
     const rect = targetElement.getBoundingClientRect();
@@ -638,9 +642,10 @@ export function copyAsMarkdown() {
     copyButton.style.top = `${window.scrollY + rect.top}px`;
 
     // --- Button Click Handler ---
-    copyButton.addEventListener('click', async e => {
+    copyButton.addEventListener('click', async (e: MouseEvent) => {
       e.stopPropagation(); // Prevent click from bubbling up (e.g., deselecting)
       if (!selectedElement) return; // Should not happen if button exists
+      if (!copyButton) return; // Check if copyButton is null
 
       const originalText = copyButton.textContent;
       const originalBackground = copyButton.style.background;
@@ -650,13 +655,20 @@ export function copyAsMarkdown() {
       try {
         await copyElementAsMarkdown(selectedElement);
         // Visual feedback for success
-        copyButton.textContent = 'Copied!';
-        copyButton.style.background = '#45a049'; // Darker green
-      } catch (err) {
-        console.error('CopyAsMarkdown: Copy process failed:', err);
-        copyButton.textContent = 'Error!';
-        copyButton.style.background = '#F44336'; // Red
-        alert(`Copy failed: ${err.message}`); // Notify user
+        // Need to check copyButton again as it might be removed in the meantime by another action
+        if (copyButton) {
+          copyButton.textContent = 'Copied!';
+          copyButton.style.background = '#45a049'; // Darker green
+        }
+      } catch (err: unknown) {
+        console.error('CopyAsMarkdown: Copy process failed:', err instanceof Error ? err.message : err);
+        if (copyButton) {
+          copyButton.textContent = 'Error!';
+          copyButton.style.background = '#F44336'; // Red
+        }
+        // Use error message in alert
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        alert(`Copy failed: ${errorMessage}`); // Notify user
       } finally {
         // Restore button appearance after a delay
         setTimeout(() => {
@@ -676,7 +688,7 @@ export function copyAsMarkdown() {
   /**
    * Removes the "Copy as Markdown" button from the DOM if it exists.
    */
-  function removeCopyButton() {
+  function removeCopyButton(): void {
     if (copyButton && copyButton.parentNode) {
       copyButton.parentNode.removeChild(copyButton);
     }
@@ -688,12 +700,13 @@ export function copyAsMarkdown() {
    * Highlights hoverable elements.
    * @param {MouseEvent} event The mouse event.
    */
-  function handleMouseOver(event) {
+  function handleMouseOver(event: MouseEvent): void {
     if (!selectorActive) return;
-    const target = event.target;
+    // Use event.target which is EventTarget | null, cast to Node or Element when needed
+    const target = event.target as Node | null;
 
     // Ignore irrelevant targets
-    if (target === selectedElement || target === document.body || target === copyButton) return;
+    if (!target || target === selectedElement || target === document.body || target === copyButton) return;
 
     // Check if the element is suitable for hovering/selection
     if (!isElementHoverable(target)) {
@@ -705,14 +718,17 @@ export function copyAsMarkdown() {
       return;
     }
 
+    // Target is hoverable, ensure it's an HTMLElement for styling
+    const targetElement = target as HTMLElement;
+
     // If moved from a different hoverable element, restore its style
-    if (currentHoverElement && currentHoverElement !== target && currentHoverElement !== selectedElement) {
+    if (currentHoverElement && currentHoverElement !== targetElement && currentHoverElement !== selectedElement) {
       restoreStyle(currentHoverElement);
     }
 
     // Apply hover style if the target is new
-    if (currentHoverElement !== target) {
-      currentHoverElement = target;
+    if (currentHoverElement !== targetElement) {
+      currentHoverElement = targetElement;
       applyStyle(currentHoverElement, HOVER_STYLE);
     }
   }
@@ -722,7 +738,7 @@ export function copyAsMarkdown() {
    * Removes highlight unless moving to the copy button or non-hoverable element.
    * @param {MouseEvent} event The mouse event.
    */
-  function handleMouseOut(event) {
+  function handleMouseOut(event: MouseEvent): void {
     if (
       !selectorActive ||
       !currentHoverElement ||
@@ -733,7 +749,8 @@ export function copyAsMarkdown() {
     }
 
     // Don't remove highlight if moving to the copy button or an unhoverable related target
-    const relatedTarget = event.relatedTarget;
+    // event.relatedTarget is EventTarget | null
+    const relatedTarget = event.relatedTarget as Node | null; // Cast for isElementHoverable
     if (relatedTarget === copyButton || (relatedTarget && !isElementHoverable(relatedTarget))) {
       return;
     }
@@ -748,12 +765,15 @@ export function copyAsMarkdown() {
    * Finalizes the selection, applies selected style, and shows the copy button.
    * @param {MouseEvent} event The mouse event.
    */
-  function handleClick(event) {
+  function handleClick(event: MouseEvent): void {
     // Ignore clicks on the copy button itself
     if (event.target === copyButton) return;
 
     // Requires active selection mode and a currently hovered element
     if (!selectorActive || !currentHoverElement) return;
+
+    // Ensure currentHoverElement is an HTMLElement before proceeding
+    if (!(currentHoverElement instanceof HTMLElement)) return;
 
     event.preventDefault();
     event.stopPropagation(); // Prevent triggering other click listeners
@@ -780,7 +800,7 @@ export function copyAsMarkdown() {
    * Handles keydown events, specifically looking for the Escape key.
    * @param {KeyboardEvent} event The keyboard event.
    */
-  function handleKeyDown(event) {
+  function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       if (selectorActive) {
         // If actively selecting, cancel selection mode
@@ -804,7 +824,7 @@ export function copyAsMarkdown() {
    * Starts the element selection mode.
    * Attaches necessary event listeners.
    */
-  function startSelectionMode() {
+  function startSelectionMode(): void {
     if (selectorActive) return; // Prevent starting multiple times
     // console.log('CopyAsMarkdown: Activating selection mode...');
 
@@ -821,10 +841,11 @@ export function copyAsMarkdown() {
 
     selectorActive = true;
     // Use capture phase (true) for listeners to catch events early
-    document.addEventListener('mouseover', handleMouseOver, true);
-    document.addEventListener('mouseout', handleMouseOut, true);
-    document.addEventListener('click', handleClick, true);
-    document.addEventListener('keydown', handleKeyDown, true);
+    // Add type assertions for event listeners if needed, though often inferred correctly
+    document.addEventListener('mouseover', handleMouseOver as EventListener, true);
+    document.addEventListener('mouseout', handleMouseOut as EventListener, true);
+    document.addEventListener('click', handleClick as EventListener, true);
+    document.addEventListener('keydown', handleKeyDown as EventListener, true);
     // console.log('CopyAsMarkdown: Mode activated.');
   }
 
@@ -833,12 +854,12 @@ export function copyAsMarkdown() {
    * Removes event listeners and optionally clears the current selection.
    * @param {boolean} [clearSelection=true] Whether to clear the currently selected element's style and button.
    */
-  function stopSelectionMode(clearSelection = true) {
+  function stopSelectionMode(clearSelection = true): void {
     // console.log('CopyAsMarkdown: Stopping selection mode...');
-    document.removeEventListener('mouseover', handleMouseOver, true);
-    document.removeEventListener('mouseout', handleMouseOut, true);
-    document.removeEventListener('click', handleClick, true);
-    document.removeEventListener('keydown', handleKeyDown, true);
+    document.removeEventListener('mouseover', handleMouseOver as EventListener, true);
+    document.removeEventListener('mouseout', handleMouseOut as EventListener, true);
+    document.removeEventListener('click', handleClick as EventListener, true);
+    document.removeEventListener('keydown', handleKeyDown as EventListener, true);
 
     selectorActive = false;
 
@@ -863,12 +884,20 @@ export function copyAsMarkdown() {
    * Main entry point for the bookmarklet.
    * Cleans up previous instances, sets up the global API, loads Turndown, and starts selection.
    */
-  function initialize() {
-    // Clean up any previous instance of this bookmarklet
-    if ((window as any).elementSelector && (window as any).elementSelector.stop) {
-      // console.log('CopyAsMarkdown: Stopping previous instance...');
-      (window as any).elementSelector.stop(true); // Stop and clear selection
+  function initialize(): void {
+    // Define a type for the global object if needed
+    interface ElementSelectorAPI {
+        start: () => void;
+        stop: (clear?: boolean) => void;
     }
+
+    // Clean up any previous instance of this bookmarklet
+    const existingSelector = (window as any).elementSelector as ElementSelectorAPI | undefined;
+    if (existingSelector && typeof existingSelector.stop === 'function') {
+        // console.log('CopyAsMarkdown: Stopping previous instance...');
+        existingSelector.stop(true); // Stop and clear selection
+    }
+
 
     // Expose control functions globally (optional, but useful for debugging/restarting)
     (window as any).elementSelector = {
@@ -878,18 +907,19 @@ export function copyAsMarkdown() {
       // isVisible: isElementHoverable,
       // isHoverable: isElementHoverable,
       // copyElement: copyElementAsMarkdown
-    };
+    } as ElementSelectorAPI; // Assert the type of the global object
 
     // Initialize Turndown synchronously now
     try {
       initializeTurndownService();
       console.log('CopyAsMarkdown: Turndown initialized successfully (called from initialize).');
-    } catch (err) {
+    } catch (err: unknown) { // Type catch
       // Log the full error object to the console where the script is executed (the webpage console)
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('CopyAsMarkdown: Failed to initialize TurndownService (caught in initialize):', err);
       alert(
         'CopyAsMarkdown Error: Could not initialize Markdown converter. ' +
-          'Copy functionality may be broken. Check console for details. ',
+          `Copy functionality may be broken. Check console for details. Error: ${errorMessage}`
       );
       // Decide if you want to proceed without Turndown or stop
       // return; // Example: stop if Turndown fails

@@ -7,8 +7,24 @@ export default defineConfig({
     // Explicitly add permissions here if auto-detection fails
     permissions: [
       "contextMenus",
+      // "commands", // WXT might add this automatically when commands are defined
       // Add other necessary permissions if needed, e.g., "storage"
       // WXT usually adds "scripting" automatically for content scripts
     ],
+    // Define keyboard shortcuts
+    commands: {
+      'copy-selection-as-markdown': {
+        suggested_key: {
+          default: 'Alt+Shift+C',
+        },
+        description: 'Copy current selection as Markdown',
+      },
+      'pick-element-as-markdown': {
+        suggested_key: {
+          default: 'Alt+Shift+E',
+        },
+        description: 'Pick element to copy as Markdown',
+      },
+    },
   },
 });

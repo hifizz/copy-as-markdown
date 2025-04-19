@@ -15,6 +15,7 @@ const markdownCopier = (() => {
   const originalStyles = new WeakMap<HTMLElement, { outline: string; cursor: string }>();
   let turndownService: TurndownService | null = null;
   let isTurndownInitialized = false;
+  let originalBodyCursor: string | null = null;
 
   // Bound event handlers (needed if we still use event listeners)
   // Need to define the handlers first before binding
@@ -779,11 +780,21 @@ const markdownCopier = (() => {
 
     createCopyButton(selectedElement); // Show the copy button
 
-    // Deactivate selection mode after a selection is made
+    // Deactivate selection mode *state*
     selectorActive = false;
-    // Remove listeners after selection is complete
-    removeEventListeners();
-    // console.log('CopyAsMarkdown: Selection complete.');
+    console.log('[copyAsMarkdown] Selection complete. selectorActive set to false.');
+
+    // Remove only the listeners related to element picking/hovering,
+    // KEEP the keydown listener active for Escape to clear selection.
+    console.log('[copyAsMarkdown] Removing mouse/click listeners after selection...');
+    if (boundHandleMouseOver) document.removeEventListener('mouseover', boundHandleMouseOver, true);
+    if (boundHandleMouseOut) document.removeEventListener('mouseout', boundHandleMouseOut, true);
+    if (boundHandleClick) document.removeEventListener('click', boundHandleClick, true);
+    // Reset only these bound handlers
+    boundHandleMouseOver = null;
+    boundHandleMouseOut = null;
+    boundHandleClick = null;
+    // DO NOT call removePickModeEventListeners() here
   }
 
   /**
@@ -791,57 +802,54 @@ const markdownCopier = (() => {
    * @param {KeyboardEvent} event The keyboard event.
    */
   function handleKeyDown(event: KeyboardEvent): void {
+    console.log('[copyAsMarkdown] handleKeyDown triggered. Key:', event.key, 'selectorActive:', selectorActive);
     if (event.key === 'Escape') {
       if (selectorActive) {
-        // If actively selecting, cancel selection mode
-        stopSelectionMode(true); // True clears any current hover highlight
-        // console.log('CopyAsMarkdown: Selection mode stopped via Escape.');
+        // If actively picking, stop the mode completely (removes all listeners)
+        console.log('[copyAsMarkdown] Escape pressed during active selection. Stopping mode...');
+        stopSelectionMode(true); // Calls removePickModeEventListeners internally
       } else if (selectedElement) {
-        // If an element is already selected, clear the selection
+        // If an element is already selected (not actively picking), just clear the selection
+        console.log('[copyAsMarkdown] Escape pressed with element selected. Clearing selection...');
         restoreStyle(selectedElement);
         removeCopyButton();
         selectedElement = null;
-        // console.log('CopyAsMarkdown: Selection cleared via Escape.');
+        // DO NOT remove keydown listener here, it might be needed later
       }
-      // Optionally log how to restart if needed
-      // console.log('CopyAsMarkdown: Restart selection with: window.elementSelector.start()');
     }
   }
 
-  // Helper to add event listeners
-  function addEventListeners(): void {
-    console.log('Adding event listeners (mouseover, mouseout, keydown)...');
+  // Helper to add event listeners for pick mode
+  function addPickModeEventListeners(): void {
+    console.log('[copyAsMarkdown] Adding pick mode event listeners...');
     // Add non-click listeners immediately
-    boundHandleMouseOver = handleMouseOver.bind(null); // Use .bind(null) for simple functions
+    boundHandleMouseOver = handleMouseOver.bind(null);
     boundHandleMouseOut = handleMouseOut.bind(null);
     boundHandleKeyDown = handleKeyDown.bind(null);
 
     document.addEventListener('mouseover', boundHandleMouseOver, true);
     document.addEventListener('mouseout', boundHandleMouseOut, true);
     document.addEventListener('keydown', boundHandleKeyDown, true);
-    // Delay adding the click listener to prevent capturing the initiating click
+    // Delay adding the click listener
     setTimeout(() => {
-      // Check if selection mode is still active before adding
       if (selectorActive) {
-          console.log('Adding event listener (click) after timeout...');
+          console.log('[copyAsMarkdown] Adding click listener after timeout...');
           boundHandleClick = handleClick.bind(null);
           document.addEventListener('click', boundHandleClick, true);
       }
     }, 0);
   }
 
-  // Helper to remove event listeners
-  function removeEventListeners(): void {
-    console.log('Removing event listeners...');
+  // Helper to remove ONLY mouse/click pick mode event listeners
+  function removePickModeEventListeners(): void {
+    console.log('[copyAsMarkdown] Removing mouse/click pick mode event listeners...');
     if (boundHandleMouseOver) document.removeEventListener('mouseover', boundHandleMouseOver, true);
     if (boundHandleMouseOut) document.removeEventListener('mouseout', boundHandleMouseOut, true);
     if (boundHandleClick) document.removeEventListener('click', boundHandleClick, true);
-    if (boundHandleKeyDown) document.removeEventListener('keydown', boundHandleKeyDown, true);
-    // Reset bound handlers
+    // Reset only mouse/click bound handlers
     boundHandleMouseOver = null;
     boundHandleMouseOut = null;
     boundHandleClick = null;
-    boundHandleKeyDown = null;
   }
 
   // === Public API ===
@@ -875,19 +883,57 @@ const markdownCopier = (() => {
       currentHoverElement = null;
     }
 
+    // Store and change body cursor
+    const body = document.body;
+    if (body && originalBodyCursor === null) { // Store only once per activation cycle
+        originalBodyCursor = body.style.cursor || '';
+        body.style.cursor = 'crosshair';
+        console.log('[copyAsMarkdown] Changed body cursor to crosshair.');
+    }
+
     selectorActive = true;
-    addEventListeners();
+    addPickModeEventListeners();
     // console.log('CopyAsMarkdown: Mode activated.');
   }
 
   /**
-   * Stops the element selection mode.
+   * Stops the element selection mode COMPLETELY, typically due to cancellation (e.g., pressing Escape).
+   * This function is responsible for:
+   * - Removing all active event listeners (mouseover, mouseout, click, keydown).
+   * - Restoring the original body cursor.
+   * - Clearing any temporary hover styles.
+   * - Optionally clearing the current selection and removing the copy button.
+   *
+   * **IMPORTANT:** This function should ONLY be called when *cancelling* or *exiting* the selection mode
+   * entirely (like pressing Esc). It should NOT be called after a successful element selection click,
+   * as the `handleClick` function handles the necessary state changes and listener removal for that specific case.
+   *
+   * @param {boolean} [clearSelection=true] If true, also restores the style of the selected element
+   *                                        and removes the copy button. Set to false if you want to stop
+   *                                        listeners/cursor but leave the visual selection intact temporarily
+   *                                        (though standard cancellation flow usually implies clearing).
    */
   function stopSelectionMode(clearSelection = true): void {
-    // console.log('CopyAsMarkdown: Stopping selection mode...');
-    removeEventListeners(); // Ensure listeners are removed
+    console.log(`[copyAsMarkdown] Stopping selection mode (clearSelection: ${clearSelection})...`);
+    removePickModeEventListeners(); // Remove mouse/click listeners
+
+    // Explicitly remove keydown listener here
+    if (boundHandleKeyDown) {
+      console.log('[copyAsMarkdown] Removing keydown listener in stopSelectionMode...');
+      document.removeEventListener('keydown', boundHandleKeyDown, true);
+      boundHandleKeyDown = null; // Reset bound handler
+    }
 
     selectorActive = false;
+
+    // Restore body cursor
+    const body = document.body;
+    if (body && originalBodyCursor !== null) {
+        body.style.cursor = originalBodyCursor;
+        if (!body.style.cursor) body.style.removeProperty('cursor'); // Clean up if original was empty
+        originalBodyCursor = null; // Reset stored value
+        console.log('[copyAsMarkdown] Restored body cursor.');
+    }
 
     // Clear hover highlight if any
     if (currentHoverElement) {
@@ -901,7 +947,7 @@ const markdownCopier = (() => {
       removeCopyButton();
       selectedElement = null;
     }
-    // console.log('CopyAsMarkdown: Mode stopped.');
+    console.log('[copyAsMarkdown] Mode stopped.');
   }
 
   /**

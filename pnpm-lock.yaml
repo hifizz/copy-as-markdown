@@ -19,6 +19,9 @@ dependencies:
     version: 1.0.2
 
 devDependencies:
+  '@types/chrome':
+    specifier: ^0.0.315
+    version: 0.0.315
   '@types/react':
     specifier: ^19.1.0
     version: 19.1.2
@@ -786,6 +789,13 @@ packages:
     resolution: {integrity: sha512-dkO5fhS7+/oos4ciWxyEyjWe48zmG6wbCheo/G2ZnHx4fs3EU6YC6UM8rk56gAjNJ9P3MTH2jo5jb92/K6wbng==}
     dependencies:
       '@babel/types': 7.27.0
+    dev: true
+
+  /@types/chrome@0.0.315:
+    resolution: {integrity: sha512-Oy1dYWkr6BCmgwBtOngLByCHstQ3whltZg7/7lubgIZEYvKobDneqplgc6LKERNRBwckFviV4UU5AZZNUFrJ4A==}
+    dependencies:
+      '@types/filesystem': 0.0.36
+      '@types/har-format': 1.2.16
     dev: true
 
   /@types/estree@1.0.7:

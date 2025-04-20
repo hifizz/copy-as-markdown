@@ -8,12 +8,12 @@ import {
   addSkipInvisibleRule,
   addAbsoluteImageRule,
   addAbsoluteLinkRule,
+  addLinkedImageRule,
 } from './turndownRules';
 import { preprocessElement, removePreprocessingMarkers } from './preprocessElement';
 
 // Create a scope for state and functions
 const markdownCopier = (() => {
-
   // --- State ---
   let selectorActive = false;
   let currentHoverElement: HTMLElement | null = null;
@@ -52,6 +52,7 @@ const markdownCopier = (() => {
       addAbsoluteImageRule(turndownService);
       addAbsoluteLinkRule(turndownService);
       turndownService.use(gfm);
+      addLinkedImageRule(turndownService);
 
       console.log('CopyAsMarkdown: Turndown rules and GFM plugin applied successfully.');
       isTurndownInitialized = true;
@@ -242,7 +243,6 @@ const markdownCopier = (() => {
     // KEEP the keydown listener active for Escape to clear selection.
     console.log('[copyAsMarkdown] Removing mouse/click listeners after selection...');
     removePickModeEventListeners(); // Removes mouseover, mouseout, click
-    // Reset only these bound handlers handled within removePickModeEventListeners
   }
 
   /**
@@ -267,7 +267,6 @@ const markdownCopier = (() => {
         console.log('[copyAsMarkdown] Escape pressed with element selected. Clearing selection...');
         uiManager.clearSelectionUI(selectedElement); // Use UI Manager to clear style and button
         selectedElement = null;
-        // DO NOT remove keydown listener here, it might be needed later or handled by stopSelectionMode
       }
     }
   }
@@ -355,6 +354,41 @@ const markdownCopier = (() => {
     }
 
     selectorActive = true;
+
+    // --- Apply initial hover near viewport center ---
+    try {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const initialElement = document.elementFromPoint(centerX, centerY);
+
+      console.log('[copyAsMarkdown] Initial element:', initialElement);
+
+      // Check if element is valid, hoverable, not body, and an HTMLElement
+      if (
+        initialElement &&
+        initialElement instanceof HTMLElement &&
+        isElementHoverable(initialElement) &&
+        initialElement !== document.body
+      ) {
+        if (uiManager) {
+          // Ensure UI Manager is ready
+          console.log(
+            '[copyAsMarkdown] Applying initial hover to element near viewport center:',
+            initialElement
+          );
+          uiManager.applyStyle(initialElement, 'hover');
+          currentHoverElement = initialElement; // Set as current hover for subsequent logic
+        }
+      } else {
+        console.log(
+          '[copyAsMarkdown] No suitable initial hover element found near viewport center.'
+        );
+      }
+    } catch (e) {
+      console.warn('[copyAsMarkdown] Error finding or styling initial hover element:', e);
+    }
+    // --- End initial hover ---
+
     addPickModeEventListeners();
     // console.log('CopyAsMarkdown: Mode activated.');
   }
@@ -443,12 +477,30 @@ const markdownCopier = (() => {
     }
   }
 
+  // Add functions to expose state and actions to the public API
+  function getSelectedElement(): HTMLElement | null {
+    return selectedElement;
+  }
+
+  function showToast(message: string, type: 'success' | 'error'): void {
+    if (uiManager) {
+      uiManager.showToast(message, type);
+    } else {
+      // Fallback if UI manager somehow not ready (shouldn't happen in normal flow)
+      console.warn('UIManager not available for toast:', message);
+      alert(message); // Basic alert fallback
+    }
+  }
+
   // Return the public API
   return {
     init: initializeTurndownService, // Expose init function
     startSelectionMode,
     stopSelectionMode,
     copyHtmlAsMarkdown,
+    copyElementAsMarkdown, // Expose this core function
+    getSelectedElement, // Expose getter for selected element
+    showToast, // Expose toast function
   };
 })();
 

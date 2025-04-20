@@ -155,3 +155,45 @@ export function addAbsoluteLinkRule(service: TurndownService): void {
     },
   });
 }
+
+/**
+ * Adds a custom Turndown rule to handle <a> elements that only contain an <img>.
+ * Converts them to the GFM format: [![alt](src)](href)
+ * @param {TurndownService} service The Turndown service instance.
+ */
+export function addLinkedImageRule(service: TurndownService): void {
+  service.addRule('linkedImage', {
+    filter: (node, options) => {
+      if (node.nodeName !== 'A' || !node.getAttribute('href')) {
+        return false;
+      }
+      // Check children: exactly one element child, which is an IMG,
+      // and all other children are whitespace text nodes.
+      const children = Array.from(node.childNodes);
+      const elementChildren = children.filter(child => child.nodeType === Node.ELEMENT_NODE);
+      if (elementChildren.length !== 1 || elementChildren[0].nodeName !== 'IMG') {
+        return false;
+      }
+      const nonElementChildren = children.filter(child => child.nodeType !== Node.ELEMENT_NODE);
+      return nonElementChildren.every(child => !child.textContent?.trim());
+    },
+    replacement: (content, node, options) => {
+      const anchor = node as HTMLAnchorElement;
+      const img = anchor.querySelector('img'); // Should exist due to filter
+
+      if (!img) return ''; // Should not happen based on filter logic
+
+      const href = anchor.getAttribute('href') || '';
+      const alt = img.getAttribute('alt') || '';
+      let src = img.getAttribute('src') || ''; // Raw src
+
+      // Note: Assumes existing rules/config handle making src absolute if needed.
+      // Consider if absolute URL conversion logic from addAbsoluteImageRule is needed here.
+
+      const escapedAlt = alt.replace(/([\\\[\]])/g, '\\$1'); // Escape \, [ and ] in alt text
+
+      // Construct the GFM linked image format
+      return `[![${escapedAlt}](${src})](${href})`;
+    }
+  });
+}

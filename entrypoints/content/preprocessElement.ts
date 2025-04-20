@@ -1,15 +1,17 @@
 import { getUserSelectValue } from './dom-handler'; // Needed for skip check
-
-const DATA_CAM_SKIP = 'data-cam-skip';
-const DATA_CAM_INVISIBLE = 'data-cam-invisible';
-const DATA_CAM_LINEBREAK = 'data-cam-linebreak';
+// Import constants for data attributes
+import {
+  DATA_ATTR_SKIP,
+  DATA_ATTR_INVISIBLE,
+  DATA_ATTR_LINEBREAK,
+} from './constants';
 
 /**
  * Preprocesses an element and its descendants before conversion.
  * Adds data attributes based on computed styles:
- * - DATA_CAM_SKIP: For elements with 'user-select: none'.
- * - 'data-cam-invisible': For elements considered visually hidden for copying.
- * - 'data-cam-linebreak': For elements that cause line breaks.
+ * - DATA_ATTR_SKIP: For elements with 'user-select: none'.
+ * - DATA_ATTR_INVISIBLE: For elements considered visually hidden for copying.
+ * - DATA_ATTR_LINEBREAK: For elements that cause line breaks.
  * These attributes are used by Turndown rules.
  * IMPORTANT: Modifies the passed element directly.
  * @param {Element} element The root element to preprocess.
@@ -21,7 +23,7 @@ export function preprocessElement(element: Element): boolean {
   // --- 1. Skip Check (user-select: none) --- Uses imported function
   const userSelectValue = getUserSelectValue(element);
   if (userSelectValue === 'none') {
-    element.setAttribute(DATA_CAM_SKIP, 'true');
+    element.setAttribute(DATA_ATTR_SKIP, 'true');
     return false; // Don't process children or other checks if skipped
   }
 
@@ -36,7 +38,7 @@ export function preprocessElement(element: Element): boolean {
     tagName === 'META' ||
     tagName === 'LINK'
   ) {
-    element.setAttribute(DATA_CAM_INVISIBLE, 'true');
+    element.setAttribute(DATA_ATTR_INVISIBLE, 'true');
     return false; // Treat as invisible, stop processing this branch
   }
 
@@ -47,14 +49,14 @@ export function preprocessElement(element: Element): boolean {
     style.opacity === '0' ||
     (style.position === 'fixed' && style.clipPath === 'inset(100%)')
   ) {
-    element.setAttribute(DATA_CAM_INVISIBLE, 'true');
+    element.setAttribute(DATA_ATTR_INVISIBLE, 'true');
     return false; // Invisible, stop processing this branch
   }
 
   const rect = element.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) {
     if (tagName === 'IMG' || element.children.length === 0) {
-      element.setAttribute(DATA_CAM_INVISIBLE, 'true');
+      element.setAttribute(DATA_ATTR_INVISIBLE, 'true');
       return false; // Invisible due to zero dimensions, stop processing
     }
     // Otherwise, allow zero-dimension elements with children (like wrapper divs)
@@ -78,7 +80,7 @@ export function preprocessElement(element: Element): boolean {
     ].includes(display) || ['BR', 'P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE'].includes(tagName);
 
   if (isBlockLike) {
-    element.setAttribute(DATA_CAM_LINEBREAK, 'true');
+    element.setAttribute(DATA_ATTR_LINEBREAK, 'true');
   }
 
   // --- 4. Recurse into Children ---
@@ -89,21 +91,21 @@ export function preprocessElement(element: Element): boolean {
 }
 
 /**
- * Removes the preprocessing attributes ('data-cam-skip', 'data-cam-invisible',
- * 'data-cam-linebreak') from an element and its descendants.
+ * Removes the preprocessing attributes (DATA_ATTR_SKIP, DATA_ATTR_INVISIBLE,
+ * DATA_ATTR_LINEBREAK) from an element and its descendants.
  * @param {Element} element The root element to clean up.
  */
 export function removePreprocessingMarkers(element: Element): void {
   if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
 
-  if (element.hasAttribute(DATA_CAM_SKIP)) {
-    element.removeAttribute(DATA_CAM_SKIP);
+  if (element.hasAttribute(DATA_ATTR_SKIP)) {
+    element.removeAttribute(DATA_ATTR_SKIP);
   }
-  if (element.hasAttribute(DATA_CAM_INVISIBLE)) {
-    element.removeAttribute(DATA_CAM_INVISIBLE);
+  if (element.hasAttribute(DATA_ATTR_INVISIBLE)) {
+    element.removeAttribute(DATA_ATTR_INVISIBLE);
   }
-  if (element.hasAttribute(DATA_CAM_LINEBREAK)) {
-    element.removeAttribute(DATA_CAM_LINEBREAK);
+  if (element.hasAttribute(DATA_ATTR_LINEBREAK)) {
+    element.removeAttribute(DATA_ATTR_LINEBREAK);
   }
 
   // Recursively process children

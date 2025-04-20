@@ -1,5 +1,11 @@
 import TurndownService from 'turndown';
 import { detectCodeLanguage } from './dom-handler'; // Needed for pre rule
+// Import constants for data attributes
+import {
+  DATA_ATTR_SKIP,
+  DATA_ATTR_INVISIBLE,
+  DATA_ATTR_LINEBREAK,
+} from './constants';
 
 /**
  * Adds a Turndown rule to handle <pre> elements, attempting to preserve content
@@ -17,8 +23,8 @@ export function addPreElementRule(service: TurndownService): void {
         return !(
           currentNode.nodeType === Node.ELEMENT_NODE &&
           (currentNode as Element).hasAttribute &&
-          (currentNode as Element).hasAttribute('data-cam-skip')
-        ); // Use specific attribute
+          (currentNode as Element).hasAttribute(DATA_ATTR_SKIP)
+        );
       };
 
       // Helper to recursively get text, skipping marked nodes and adding newlines based on markers
@@ -33,10 +39,10 @@ export function addPreElementRule(service: TurndownService): void {
         if (currentNode.nodeType === Node.ELEMENT_NODE) {
           const element = currentNode as HTMLElement;
           if (!shouldProcessNode(element)) {
-            return ''; // Skip node marked with data-cam-skip
+            return '';
           }
 
-          const hasLineBreakMarker = element.hasAttribute('data-cam-linebreak');
+          const hasLineBreakMarker = element.hasAttribute(DATA_ATTR_LINEBREAK);
           const isBrTag = element.tagName === 'BR';
 
           if (element.childNodes && element.childNodes.length > 0) {
@@ -69,24 +75,24 @@ export function addPreElementRule(service: TurndownService): void {
 
 /**
  * Adds a Turndown rule to explicitly skip elements that were marked
- * with the 'data-cam-skip' attribute during preprocessing.
+ * with the DATA_ATTR_SKIP attribute during preprocessing.
  * @param {TurndownService} service The Turndown service instance.
  */
 export function addSkipMarkedElementsRule(service: TurndownService): void {
   service.addRule('skipMarkedDataCamSkip', {
-    filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute('data-cam-skip'),
+    filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute(DATA_ATTR_SKIP),
     replacement: (): string => '',
   });
 }
 
 /**
  * Adds a Turndown rule to explicitly skip elements that were marked
- * as invisible ('data-cam-invisible') during preprocessing.
+ * as invisible (DATA_ATTR_INVISIBLE) during preprocessing.
  * @param {TurndownService} service The Turndown service instance.
  */
 export function addSkipInvisibleRule(service: TurndownService): void {
   service.addRule('skipInvisible', {
-    filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute('data-cam-invisible'),
+    filter: (node): boolean => node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute && (node as Element).hasAttribute(DATA_ATTR_INVISIBLE),
     replacement: (): string => '',
   });
 }
@@ -179,7 +185,7 @@ export function addLinkedImageRule(service: TurndownService): void {
     },
     replacement: (content, node, options) => {
       const anchor = node as HTMLAnchorElement;
-      const img = anchor.querySelector('img'); // Should exist due to filter
+      const img = anchor.querySelector('img'); // Should exist due to filter logic
 
       if (!img) return ''; // Should not happen based on filter logic
 

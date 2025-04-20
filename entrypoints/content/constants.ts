@@ -17,3 +17,12 @@ export const TITLE_PICK_ELEMENT = 'Pick Element to Copy as Markdown';
 // --- UI Text ---
 export const TOOLBAR_TEXT_COPY_BASE = 'Copy as markdown'; // Base text for the UI button
 
+// --- Preprocessing Data Attributes ---
+const PREPROCESS_PREFIX = 'copy-as-markdown';
+export const DATA_ATTR_SKIP = `data-${PREPROCESS_PREFIX}-skip`;
+export const DATA_ATTR_INVISIBLE = `data-${PREPROCESS_PREFIX}-invisible`;
+export const DATA_ATTR_LINEBREAK = `data-${PREPROCESS_PREFIX}-linebreak`;
+
+// Include an empty export to ensure it's treated as a module
+export {};
+

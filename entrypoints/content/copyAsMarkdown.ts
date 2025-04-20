@@ -25,9 +25,25 @@ const markdownCopier = (() => {
   let boundHandleMouseOut: ((event: MouseEvent) => void) | null = null;
   let boundHandleClick: ((event: MouseEvent) => void) | null = null;
   let boundHandleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+  let boundHandleClickOutside: ((event: MouseEvent) => void) | null = null; // Listener for clicking outside
 
-  // Instantiate the UI Manager - Will be initialized after copyElementAsMarkdown is defined
+  // Instantiate the UI Manager
   let uiManager: UIManager | null = null;
+
+  // Define the cancellation trigger function
+  function triggerClearSelection(): void {
+    console.log('[copyAsMarkdown] Cancellation triggered by UI (X button).');
+    clearSelectionAndListeners(); // Call the main cleanup logic
+  }
+
+  // Define the repick trigger function
+  function triggerRepick(): void {
+    console.log('[copyAsMarkdown] Repick triggered by UI (↺ button).');
+    // Clear current selection UI and listeners *before* starting new selection
+    clearSelectionAndListeners();
+    // Start selection mode again
+    startSelectionMode();
+  }
 
   // === Turndown Setup & Rules (Internal Helpers) ===
   function initializeTurndownService(): boolean {
@@ -125,6 +141,10 @@ const markdownCopier = (() => {
 
   // Initialize the UI Manager *after* copyElementAsMarkdown is defined.
   uiManager = new UIManager(copyElementAsMarkdown);
+  // Set the cancel handler *after* uiManager is initialized
+  uiManager.setCancelHandler(triggerClearSelection);
+  // Set the repick handler *after* uiManager is initialized
+  uiManager.setRepickHandler(triggerRepick);
 
   // === UI & Event Handling ===
 
@@ -207,12 +227,14 @@ const markdownCopier = (() => {
 
   /**
    * Handles click events during selection mode.
-   * Finalizes the selection, applies selected style, and shows the copy button using UIManager.
+   * Finalizes the selection, applies selected style, shows the copy button,
+   * and adds a listener to handle clicks outside the selection.
    * @param {MouseEvent} event The mouse event.
    */
   function handleClick(event: MouseEvent): void {
+    const uiToolbar = uiManager?.getToolbarElement();
     // Ignore clicks on the copy button itself (handled internally by UIManager)
-    // if (uiManager && uiManager.isButtonTarget(event.target as Node)) return;
+    if (uiToolbar && uiToolbar.contains(event.target as Node)) return;
 
     // Requires active selection mode and a currently hovered element
     if (!selectorActive || !currentHoverElement || !uiManager) return;
@@ -223,14 +245,12 @@ const markdownCopier = (() => {
     event.preventDefault();
     event.stopPropagation(); // Prevent triggering other click listeners
 
-    // Clear previous selection styling and button using UIManager
-    if (selectedElement) {
-      uiManager.clearSelectionUI(selectedElement); // Handles restoreStyle and removeButton
-    }
+    // --- Clear previous selection and listeners ---
+    clearSelectionAndListeners(); // Clear any previous selection + outside click listener
 
-    // Set the new selected element
+    // --- Set new selection ---
     selectedElement = currentHoverElement;
-    uiManager.applyStyle(selectedElement, 'selected', 'default'); // Apply selected style via UIManager
+    uiManager.applyStyle(selectedElement, 'selected'); // Apply selected style via UIManager (cursor removed)
     currentHoverElement = null; // Clear hover state
 
     uiManager.createCopyButton(selectedElement); // Show the copy button via UIManager
@@ -239,15 +259,35 @@ const markdownCopier = (() => {
     selectorActive = false;
     console.log('[copyAsMarkdown] Selection complete. selectorActive set to false.');
 
-    // Remove only the listeners related to element picking/hovering,
-    // KEEP the keydown listener active for Escape to clear selection.
-    console.log('[copyAsMarkdown] Removing mouse/click listeners after selection...');
+    // Remove only the listeners related to element picking/hovering
     removePickModeEventListeners(); // Removes mouseover, mouseout, click
+
+    // --- Add listener for clicking outside the new selection ---
+    // Use setTimeout to ensure this listener is added *after* the current click event bubbles up
+    setTimeout(() => {
+      // Define the click outside handler
+      const handleClickOutside = (e: MouseEvent) => {
+        const clickedToolbar = uiManager?.getToolbarElement();
+        // Check if the click target is outside the selected element AND outside the toolbar
+        if (
+          selectedElement && // Must have a selection
+          !selectedElement.contains(e.target as Node) && // Click is not inside selected element
+          (!clickedToolbar || !clickedToolbar.contains(e.target as Node)) // Click is not inside the toolbar
+        ) {
+          console.log('[copyAsMarkdown] Click outside detected. Clearing selection.');
+          clearSelectionAndListeners(); // Clean up UI, listeners, and state
+        }
+      };
+
+      boundHandleClickOutside = handleClickOutside.bind(null);
+      document.addEventListener('click', boundHandleClickOutside, true);
+      console.log('[copyAsMarkdown] Added click outside listener.');
+    }, 0);
   }
 
   /**
    * Handles keydown events, specifically looking for the Escape key.
-   * Uses UIManager for cleanup.
+   * Uses cleanup helper for clearing selection.
    * @param {KeyboardEvent} event The keyboard event.
    */
   function handleKeyDown(event: KeyboardEvent): void {
@@ -259,14 +299,13 @@ const markdownCopier = (() => {
     );
     if (event.key === 'Escape') {
       if (selectorActive) {
-        // If actively picking, stop the mode completely (removes all listeners)
+        // If actively picking, stop the mode completely
         console.log('[copyAsMarkdown] Escape pressed during active selection. Stopping mode...');
-        stopSelectionMode(true); // Calls removePickModeEventListeners and removes keydown internally
-      } else if (selectedElement && uiManager) {
-        // If an element is already selected (not actively picking), just clear the selection UI
+        stopSelectionMode(true); // Calls removePickModeEventListeners, removes keydown, calls clearSelectionAndListeners
+      } else if (selectedElement) {
+        // If an element is already selected (not actively picking), just clear the selection and listeners
         console.log('[copyAsMarkdown] Escape pressed with element selected. Clearing selection...');
-        uiManager.clearSelectionUI(selectedElement); // Use UI Manager to clear style and button
-        selectedElement = null;
+        clearSelectionAndListeners(); // Use the helper
       }
     }
   }
@@ -302,6 +341,32 @@ const markdownCopier = (() => {
     boundHandleMouseOver = null;
     boundHandleMouseOut = null;
     boundHandleClick = null;
+  }
+
+  // --- NEW: Helper Functions for Cleanup ---
+
+  /**
+   * Removes the click outside listener if it exists.
+   */
+  function removeClickOutsideListener(): void {
+    if (boundHandleClickOutside) {
+      console.log('[copyAsMarkdown] Removing click outside listener.');
+      document.removeEventListener('click', boundHandleClickOutside, true);
+      boundHandleClickOutside = null;
+    }
+  }
+
+  /**
+   * Clears the current selection UI (highlight, button),
+   * removes the click outside listener, and resets the selectedElement state.
+   */
+  function clearSelectionAndListeners(): void {
+    if (selectedElement && uiManager) {
+      console.log('[copyAsMarkdown] Clearing selection UI and listeners for:', selectedElement);
+      uiManager.clearSelectionUI(selectedElement); // Handles restoreStyle and removeButton
+    }
+    removeClickOutsideListener(); // Ensure listener is removed
+    selectedElement = null; // Reset state variable
   }
 
   // === Public API ===
@@ -386,7 +451,7 @@ const markdownCopier = (() => {
 
   /**
    * Stops the element selection mode COMPLETELY, typically due to cancellation (e.g., pressing Escape).
-   * Uses UIManager for cleanup.
+   * Uses cleanup helpers.
    */
   function stopSelectionMode(clearSelection = true): void {
     console.log(`[copyAsMarkdown] Stopping selection mode (clearSelection: ${clearSelection})...`);
@@ -401,16 +466,17 @@ const markdownCopier = (() => {
 
     selectorActive = false;
 
+    // Restore body cursor - (Removed cursor logic previously)
+
     // Clear hover highlight if any, using UIManager
     if (currentHoverElement && uiManager) {
       uiManager.restoreStyle(currentHoverElement);
       currentHoverElement = null;
     }
 
-    // Clear selection highlight and button using UIManager if requested
-    if (clearSelection && selectedElement && uiManager) {
-      uiManager.clearSelectionUI(selectedElement); // Handles restoreStyle and removeButton
-      selectedElement = null;
+    // Use the cleanup helper if selection needs clearing
+    if (clearSelection) {
+      clearSelectionAndListeners();
     }
     console.log('[copyAsMarkdown] Mode stopped.');
   }
@@ -484,16 +550,23 @@ const markdownCopier = (() => {
     }
   }
 
+  // NEW: Public method to clear the current selection UI and listeners
+  function clearSelection(): void {
+    console.log('[copyAsMarkdown] Public clearSelection called.');
+    clearSelectionAndListeners();
+  }
+
   // Return the public API
   return {
-    init: initializeTurndownService, // Expose init function
+    init: initializeTurndownService,
     startSelectionMode,
     stopSelectionMode,
     copyHtmlAsMarkdown,
-    copyElementAsMarkdown, // Expose this core function
-    getSelectedElement, // Expose getter for selected element
-    showToast, // Expose toast function
-    setCopyShortcutString, // Expose the new method
+    copyElementAsMarkdown,
+    getSelectedElement,
+    showToast,
+    setCopyShortcutString,
+    clearSelection,
   };
 })();
 

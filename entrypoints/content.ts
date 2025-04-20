@@ -38,20 +38,21 @@ export default defineContentScript({
       else if (message && message.action === 'copySelection') {
         console.log('Handling copy action...');
 
-        // --- Check for element selected by Picker first ---\n        const selectedPickerElement = markdownUtils.getSelectedElement();\n
+        // --- Check for element selected by Picker first ---
         const selectedPickerElement = markdownUtils.getSelectedElement();
         if (selectedPickerElement) {
           console.log('Picker element found, copying it...', selectedPickerElement);
           markdownUtils.copyElementAsMarkdown(selectedPickerElement)
             .then((markdown) => {
               console.log('Picker element copied successfully.');
-              markdownUtils.showToast('✓ Copied Element as Markdown', 'success'); // Use unified toast
+              markdownUtils.showToast('✓ Copied Element as Markdown', 'success');
+              markdownUtils.clearSelection();
               sendResponse({ status: 'elementCopied' });
             })
             .catch((error) => {
               const errorMsg = error instanceof Error ? error.message : String(error);
               console.error('Failed to copy picker element:', errorMsg);
-              markdownUtils.showToast(`✗ Element Copy Failed: ${errorMsg}`, 'error'); // Use unified toast
+              markdownUtils.showToast(`✗ Element Copy Failed: ${errorMsg}`, 'error');
               sendResponse({ status: 'copyFailed', error: errorMsg });
             });
           return true; // Indicate async response

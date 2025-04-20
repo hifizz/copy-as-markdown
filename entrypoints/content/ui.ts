@@ -4,21 +4,38 @@
  */
 
 // === Constants ===
-const HOVER_STYLE = '2px solid green';
-const SELECTED_STYLE = '3px solid green';
+const HOVER_BG_COLOR = 'rgba(76, 175, 80, 0.2)'; // Light green overlay
+const SELECTED_BG_COLOR = 'rgba(76, 175, 80, 0.4)'; // Darker green overlay
+const HOVER_OUTLINE = '1px solid rgba(76, 175, 80, 0.6)'; // Thin, semi-transparent outline for hover
+const SELECTED_OUTLINE = '2px solid rgba(76, 175, 80, 0.9)'; // Thicker, more solid outline for selected
 const VIEWPORT_MARGIN = 10; // Safety margin from viewport edges in pixels
+
+// Toolbar Styles (Tailwind-inspired)
+const TOOLBAR_BG = '#2D3748'; // Gray-800
+const TOOLBAR_TEXT = '#E2E8F0'; // Gray-300
+const TOOLBAR_PADDING = '6px 12px';
+const TOOLBAR_RADIUS = '6px';
+const TOOLBAR_SHADOW = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+const TOOLBAR_FONT_SIZE = '13px';
+const TOOLBAR_TRANSITION = 'opacity 0.2s ease-out, transform 0.2s ease-out';
 
 // === Types ===
 type CopyFunction = (element: Element) => Promise<string>;
-type StyleRecord = { outline: string; cursor: string };
+type StyleRecord = { cursor: string; backgroundColor: string; transition: string; outline: string };
 
 // === UI Manager Class ===
 
 export class UIManager {
-  private copyButton: HTMLButtonElement | null = null;
+  private copyToolbar: HTMLDivElement | null = null;
   private originalStyles = new WeakMap<HTMLElement, StyleRecord>();
   private selectedElementRef: HTMLElement | null = null; // Keep track of the element the button is associated with
   private copyHandler: CopyFunction;
+  private scrollListenerAttached = false; // Flag to track scroll listener
+  private isScrollUpdatePending = false; // Flag for RAF throttling
+  private lastTargetRect: DOMRect | null = null;
+  private lastToolbarRect: DOMRect | null = null;
+  private toastElement: HTMLDivElement | null = null; // Element for the toast message
+  private toastTimeoutId: number | null = null; // Timeout ID for hiding toast
 
   constructor(copyHandler: CopyFunction) {
     this.copyHandler = copyHandler;
@@ -29,17 +46,23 @@ export class UIManager {
   private storeStyle(element: HTMLElement): void {
     if (!this.originalStyles.has(element)) {
       this.originalStyles.set(element, {
-        outline: element.style.outline || '',
         cursor: element.style.cursor || '',
+        backgroundColor: element.style.backgroundColor || '',
+        transition: element.style.transition || '',
+        outline: element.style.outline || '',
       });
     }
   }
 
   applyStyle(element: HTMLElement, styleType: 'hover' | 'selected', cursorStyle = 'pointer'): void {
     this.storeStyle(element);
-    const outlineStyle = styleType === 'hover' ? HOVER_STYLE : SELECTED_STYLE;
-    element.style.outline = outlineStyle;
+    const bgColor = styleType === 'hover' ? HOVER_BG_COLOR : SELECTED_BG_COLOR;
+    const outlineStyle = styleType === 'hover' ? HOVER_OUTLINE : SELECTED_OUTLINE;
+
     element.style.cursor = cursorStyle;
+    element.style.backgroundColor = bgColor;
+    element.style.outline = outlineStyle;
+    element.style.transition = 'background-color 0.15s ease-in-out, cursor 0.15s ease-in-out, outline 0.15s ease-in-out';
   }
 
   restoreStyle(element: HTMLElement | null): void {
@@ -47,12 +70,15 @@ export class UIManager {
 
     const styles = this.originalStyles.get(element);
     if (styles) {
-      element.style.outline = styles.outline;
       element.style.cursor = styles.cursor;
+      element.style.backgroundColor = styles.backgroundColor;
+      element.style.transition = styles.transition;
+      element.style.outline = styles.outline;
 
-      // Clean up inline styles if they were originally empty
-      if (!element.style.outline) element.style.removeProperty('outline');
       if (!element.style.cursor) element.style.removeProperty('cursor');
+      if (!element.style.backgroundColor) element.style.removeProperty('background-color');
+      if (!element.style.transition) element.style.removeProperty('transition');
+      if (!element.style.outline) element.style.removeProperty('outline');
 
       this.originalStyles.delete(element);
     }
@@ -70,97 +96,193 @@ export class UIManager {
    */
   private _calculateButtonPosition(
     targetRect: DOMRect,
-    button: HTMLButtonElement
+    toolbar: HTMLDivElement
   ): { top: number; left: number } {
-    let desiredLeft = targetRect.right + 5;
-    let desiredTop = targetRect.top;
+    // Target position: Centered below the element initially
+    let desiredTop = 0;
+    let desiredLeft = 0;
 
-    // Temporarily append to get button dimensions
-    button.style.visibility = 'hidden';
-    document.body.appendChild(button);
-    const buttonRect = button.getBoundingClientRect();
-    const buttonWidth = buttonRect.width;
-    const buttonHeight = buttonRect.height;
-    document.body.removeChild(button); // Clean up immediately
-    button.style.visibility = 'visible';
+    // Temporarily append to get toolbar dimensions
+    toolbar.style.visibility = 'hidden';
+    document.body.appendChild(toolbar);
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const toolbarWidth = toolbarRect.width;
+    const toolbarHeight = toolbarRect.height;
+    document.body.removeChild(toolbar); // Clean up immediately
+    toolbar.style.visibility = 'visible';
+
+    // Calculate initial desired position (centered BELOW)
+    desiredTop = targetRect.bottom + 8; // 8px margin below
+    desiredLeft = targetRect.left + targetRect.width / 2 - toolbarWidth / 2;
 
     // Adjust position to stay within viewport bounds
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Adjust left
-    if (desiredLeft + buttonWidth > viewportWidth) {
-      desiredLeft = targetRect.left - buttonWidth - 5;
-      if (desiredLeft < 0) {
-        desiredLeft = VIEWPORT_MARGIN; // Use margin
+    // Adjust top: If placing BELOW goes off bottom edge, try placing it ABOVE
+    if (desiredTop + toolbarHeight > viewportHeight - VIEWPORT_MARGIN) {
+      desiredTop = targetRect.top - toolbarHeight - 8; // Try 8px margin above
+      // If placing ABOVE *still* goes off top edge (tall element), clamp to top margin.
+      if (desiredTop < VIEWPORT_MARGIN) {
+        desiredTop = VIEWPORT_MARGIN;
       }
-    } else if (desiredLeft < 0) {
-      desiredLeft = VIEWPORT_MARGIN; // Use margin
+      // If placing above fits, keep it there.
+    } else if (desiredTop < VIEWPORT_MARGIN) {
+      desiredTop = VIEWPORT_MARGIN; // Clamp to top margin just in case
     }
 
-    // Adjust top
-    if (desiredTop + buttonHeight > viewportHeight) {
-      desiredTop = viewportHeight - buttonHeight - VIEWPORT_MARGIN; // Use margin
-    } else if (desiredTop < 0) {
-      desiredTop = VIEWPORT_MARGIN; // Use margin
+    // Adjust left: Keep it centered as much as possible within bounds
+    if (desiredLeft < VIEWPORT_MARGIN) {
+      desiredLeft = VIEWPORT_MARGIN;
+    } else if (desiredLeft + toolbarWidth > viewportWidth - VIEWPORT_MARGIN) {
+      desiredLeft = viewportWidth - toolbarWidth - VIEWPORT_MARGIN;
     }
 
     return { top: desiredTop, left: desiredLeft };
   }
 
+  /**
+   * Updates the button position based on the current position of the selected element.
+   * Intended to be called within a throttled scroll handler.
+   */
+  private _updateButtonPositionOnScroll(): void {
+    if (!this.selectedElementRef || !this.copyToolbar) {
+      return;
+    }
+
+    const targetRect = this.selectedElementRef.getBoundingClientRect();
+    const toolbarRect = this.copyToolbar.getBoundingClientRect(); // Get current toolbar dimensions
+    const toolbarWidth = toolbarRect.width;
+    const toolbarHeight = toolbarRect.height;
+
+    let desiredLeft = targetRect.right + 5;
+    let desiredTop = targetRect.top;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Adjust left
+    if (desiredLeft + toolbarWidth > viewportWidth) {
+      desiredLeft = targetRect.left - toolbarWidth - 5;
+      if (desiredLeft < 0) {
+        desiredLeft = VIEWPORT_MARGIN;
+      }
+    } else if (desiredLeft < 0) {
+      desiredLeft = VIEWPORT_MARGIN;
+    }
+
+    // Adjust top
+    if (desiredTop + toolbarHeight > viewportHeight) {
+      desiredTop = viewportHeight - toolbarHeight - VIEWPORT_MARGIN;
+    } else if (desiredTop < 0) {
+      desiredTop = VIEWPORT_MARGIN;
+    }
+
+    // Apply the new position
+    this.copyToolbar.style.left = `${desiredLeft}px`;
+    this.copyToolbar.style.top = `${desiredTop}px`;
+  }
+
+  // Scroll handler throttled with requestAnimationFrame
+  private handleScroll = () => {
+    if (!this.isScrollUpdatePending) {
+      this.isScrollUpdatePending = true;
+      requestAnimationFrame(() => {
+        this._updateButtonPositionOnScroll();
+        this.isScrollUpdatePending = false;
+      });
+    }
+  };
+
   createCopyButton(targetElement: HTMLElement): void {
-    this.removeCopyButton(); // Ensure only one button exists
+    this.removeCopyButton(); // Ensure only one toolbar exists
     this.selectedElementRef = targetElement; // Associate button with this element
 
-    this.copyButton = document.createElement('button');
-    this.copyButton.textContent = 'Copy as Markdown';
-    Object.assign(this.copyButton.style, {
+    this.copyToolbar = document.createElement('div');
+    this.copyToolbar.textContent = 'Copy as markdown (Option + shift + C)';
+    Object.assign(this.copyToolbar.style, {
       position: 'fixed',
       zIndex: '2147483647',
-      padding: '5px 10px',
-      background: '#4CAF50',
-      color: 'white',
-      border: 'none',
-      borderRadius: '3px',
-      cursor: 'pointer',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-      fontSize: '12px',
-      fontFamily: 'sans-serif',
-      lineHeight: '1.2',
+      padding: TOOLBAR_PADDING,
+      background: TOOLBAR_BG,
+      color: TOOLBAR_TEXT,
+      borderRadius: TOOLBAR_RADIUS,
+      boxShadow: TOOLBAR_SHADOW,
+      fontSize: TOOLBAR_FONT_SIZE,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', // Common system font stack
+      lineHeight: '1.4', // Adjusted line height
+      cursor: 'pointer', // Make the div itself clickable
+      opacity: '0',
+      transform: 'translateY(5px)',
+      transition: TOOLBAR_TRANSITION,
     } as Partial<CSSStyleDeclaration>);
 
     const rect = targetElement.getBoundingClientRect();
-    // Calculate position using the helper method
-    const position = this._calculateButtonPosition(rect, this.copyButton);
+    // Calculate position using the helper method, passing the toolbar div
+    const position = this._calculateButtonPosition(rect, this.copyToolbar);
 
-    this.copyButton.style.left = `${position.left}px`;
-    this.copyButton.style.top = `${position.top}px`;
+    this.copyToolbar.style.left = `${position.left}px`;
+    this.copyToolbar.style.top = `${position.top}px`;
 
-    // Internal click handler for the button
-    this.copyButton.addEventListener('click', this.handleButtonClick);
+    // Internal click handler for the toolbar div
+    this.copyToolbar.addEventListener('click', this.handleButtonClick);
 
-    document.body.appendChild(this.copyButton);
+    document.body.appendChild(this.copyToolbar);
+
+    // Trigger the animation (fade-in and move up)
+    requestAnimationFrame(() => { // Ensures styles are applied before transition starts
+      if (this.copyToolbar) { // Check if it still exists
+        this.copyToolbar.style.opacity = '1';
+        this.copyToolbar.style.transform = 'translateY(0)';
+      }
+    });
+
+    // Add scroll listener if not already attached
+    if (!this.scrollListenerAttached) {
+      window.addEventListener('scroll', this.handleScroll, { capture: true, passive: true });
+      this.scrollListenerAttached = true;
+    }
   }
 
   removeCopyButton(): void {
-    if (this.copyButton) {
-      this.copyButton.removeEventListener('click', this.handleButtonClick);
-      if (this.copyButton.parentNode) {
-        this.copyButton.parentNode.removeChild(this.copyButton);
-      }
-      this.copyButton = null;
+    if (this.copyToolbar) {
+      // Optional: Add fade-out animation before removing
+      this.copyToolbar.style.opacity = '0';
+      this.copyToolbar.style.transform = 'translateY(5px)';
+
+      // Remove listener first
+      this.copyToolbar.removeEventListener('click', this.handleButtonClick);
+
+      // Remove from DOM after transition
+      setTimeout(() => {
+        if (this.copyToolbar && this.copyToolbar.parentNode) {
+          this.copyToolbar.parentNode.removeChild(this.copyToolbar);
+        }
+        this.copyToolbar = null; // Set to null after removal
+      }, 200); // Match transition duration (0.2s)
+    } else {
+      // If no toolbar exists, just ensure state is clean
+      this.copyToolbar = null;
     }
     this.selectedElementRef = null; // Disassociate
+
+    // Remove scroll listener ONLY if no button is active anymore
+    // Note: This assumes only one button can exist. If multiple instances
+    // of UIManager could exist, this logic needs refinement.
+    if (this.scrollListenerAttached) {
+       window.removeEventListener('scroll', this.handleScroll, { capture: true });
+       this.scrollListenerAttached = false;
+       this.isScrollUpdatePending = false; // Reset RAF flag
+    }
   }
 
   // Bound handler to preserve 'this' context
   private handleButtonClick = async (e: MouseEvent): Promise<void> => {
     e.stopPropagation();
-    if (!this.selectedElementRef || !this.copyButton) return;
+    if (!this.selectedElementRef || !this.copyToolbar) return;
 
-    const button = this.copyButton;
-    const originalText = button.textContent;
-    const originalBackground = button.style.background;
+    const toolbar = this.copyToolbar;
+    const originalText = toolbar.textContent;
 
     this.updateButtonState('copying');
 
@@ -179,8 +301,8 @@ export class UIManager {
       // Restore button appearance after a delay
       setTimeout(() => {
         // Check if the button still exists and wasn't removed/replaced
-        if (this.copyButton === button) {
-          this.updateButtonState('idle', originalText ?? undefined, originalBackground);
+        if (this.copyToolbar === toolbar) {
+          this.updateButtonState('idle', originalText ?? undefined);
         }
       }, 1500);
     }
@@ -188,32 +310,104 @@ export class UIManager {
 
   private updateButtonState(
     state: 'idle' | 'copying' | 'copied' | 'error',
-    text?: string,
-    background?: string
+    text?: string
   ): void {
-    if (!this.copyButton) return;
+    if (!this.copyToolbar) return;
 
     switch (state) {
       case 'idle':
-        this.copyButton.textContent = text || 'Copy as markdown';
-        this.copyButton.style.background = background || '#4CAF50';
-        this.copyButton.disabled = false;
+        this.copyToolbar.textContent = text || 'Copy as markdown';
+        this.copyToolbar.style.cursor = 'pointer'; // Restore cursor
         break;
       case 'copying':
-        this.copyButton.textContent = 'Copying...';
-        this.copyButton.disabled = true;
+        this.copyToolbar.textContent = 'Copying...';
+        this.copyToolbar.style.cursor = 'default'; // Indicate busy
         break;
       case 'copied':
-        this.copyButton.textContent = 'Copied!';
-        this.copyButton.style.background = '#45a049'; // Darker green
-        this.copyButton.disabled = true; // Keep disabled briefly
+        this.copyToolbar.textContent = 'Copied!';
+        this.copyToolbar.style.cursor = 'default';
         break;
       case 'error':
-        this.copyButton.textContent = text || 'Error!';
-        this.copyButton.style.background = '#F44336'; // Red
-        this.copyButton.disabled = true; // Keep disabled briefly
+        this.copyToolbar.textContent = text || 'Error!';
+        this.copyToolbar.style.cursor = 'default';
         break;
     }
+  }
+
+  // --- Toast Notification ---
+
+  /**
+   * Displays a short-lived toast message on the screen.
+   * @param message The text content of the toast.
+   * @param type Controls the background color ('success' or 'error').
+   * @param duration How long the toast should be visible in milliseconds.
+   */
+  showToast(message: string, type: 'success' | 'error', duration: number = 2500): void {
+    // Clear any existing toast timeout
+    if (this.toastTimeoutId) {
+      clearTimeout(this.toastTimeoutId);
+      this.toastTimeoutId = null;
+    }
+    // Remove existing toast element immediately if present
+    if (this.toastElement && this.toastElement.parentNode) {
+      this.toastElement.parentNode.removeChild(this.toastElement);
+      this.toastElement = null;
+    }
+
+    // Create the toast element
+    this.toastElement = document.createElement('div');
+    this.toastElement.textContent = message;
+
+    // Base styles for the toast
+    Object.assign(this.toastElement.style, {
+      position: 'fixed',
+      bottom: '20px', // Position at the bottom center
+      left: '50%',
+      transform: 'translateX(-50%) translateY(10px)', // Initial position for animation
+      padding: '10px 20px',
+      borderRadius: '6px',
+      color: '#FFFFFF', // White text generally works well
+      fontSize: '14px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif',
+      zIndex: '2147483647', // Max z-index
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      opacity: '0', // Start invisible for animation
+      transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+      textAlign: 'center',
+      maxWidth: '80%', // Prevent overly wide toasts
+    } as Partial<CSSStyleDeclaration>);
+
+    // Type-specific background color
+    if (type === 'success') {
+      this.toastElement.style.backgroundColor = '#2D3748'; // Dark gray (like toolbar)
+    } else { // error
+      this.toastElement.style.backgroundColor = '#C53030'; // Tailwind Red 700
+    }
+
+    // Append to body and trigger animation
+    document.body.appendChild(this.toastElement);
+    requestAnimationFrame(() => {
+       if (this.toastElement) {
+           this.toastElement.style.opacity = '1';
+           this.toastElement.style.transform = 'translateX(-50%) translateY(0)';
+       }
+    });
+
+    // Set timeout to hide and remove the toast
+    this.toastTimeoutId = window.setTimeout(() => {
+      if (this.toastElement) {
+        this.toastElement.style.opacity = '0';
+        this.toastElement.style.transform = 'translateX(-50%) translateY(10px)';
+        // Remove from DOM after transition ends
+        setTimeout(() => {
+           if (this.toastElement && this.toastElement.parentNode) {
+                this.toastElement.parentNode.removeChild(this.toastElement);
+                this.toastElement = null;
+                this.toastTimeoutId = null; // Clear the ID after removal
+           }
+        }, 300); // Match transition duration
+      }
+    }, duration); // Use provided duration
   }
 
   // --- Cleanup ---

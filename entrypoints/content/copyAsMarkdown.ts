@@ -344,15 +344,6 @@ const markdownCopier = (() => {
       currentHoverElement = null;
     }
 
-    // Store and change body cursor using UI helpers
-    const body = document.body;
-    if (body && originalBodyCursor === null) {
-      // Store only once per activation cycle
-      originalBodyCursor = body.style.cursor || '';
-      setBodyCursor('crosshair'); // Use UI helper
-      console.log('[copyAsMarkdown] Changed body cursor to crosshair.');
-    }
-
     selectorActive = true;
 
     // --- Apply initial hover near viewport center ---
@@ -409,14 +400,6 @@ const markdownCopier = (() => {
     }
 
     selectorActive = false;
-
-    // Restore body cursor using UI helper
-    if (originalBodyCursor !== null) {
-      // Check if we stored it
-      restoreBodyCursor(originalBodyCursor); // Use UI helper
-      originalBodyCursor = null; // Reset stored value
-      console.log('[copyAsMarkdown] Restored body cursor.');
-    }
 
     // Clear hover highlight if any, using UIManager
     if (currentHoverElement && uiManager) {

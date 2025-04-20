@@ -1,7 +1,7 @@
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import { getUserSelectValue, isElementHoverable } from './dom-handler';
-import { UIManager, setBodyCursor, restoreBodyCursor } from './ui';
+import { isElementHoverable } from './dom-handler';
+import { UIManager } from './ui';
 import {
   addPreElementRule,
   addSkipMarkedElementsRule,

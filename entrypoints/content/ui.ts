@@ -2,7 +2,7 @@ import { TOOLBAR_TEXT_COPY_BASE } from './constants'; // Import base text consta
 
 /**
  * Manages UI elements and interactions for the CopyAsMarkdown feature,
- * including styling, button creation, and cursor changes.
+ * including styling, button creation.
  */
 
 // === Constants ===
@@ -23,7 +23,7 @@ const TOOLBAR_TRANSITION = 'opacity 0.2s ease-out, transform 0.2s ease-out';
 
 // === Types ===
 type CopyFunction = (element: Element) => Promise<string>;
-type StyleRecord = { cursor: string; backgroundColor: string; transition: string; outline: string };
+type StyleRecord = { backgroundColor: string; transition: string; outline: string };
 
 // === UI Manager Class ===
 
@@ -55,7 +55,6 @@ export class UIManager {
   private storeStyle(element: HTMLElement): void {
     if (!this.originalStyles.has(element)) {
       this.originalStyles.set(element, {
-        cursor: element.style.cursor || '',
         backgroundColor: element.style.backgroundColor || '',
         transition: element.style.transition || '',
         outline: element.style.outline || '',
@@ -63,15 +62,14 @@ export class UIManager {
     }
   }
 
-  applyStyle(element: HTMLElement, styleType: 'hover' | 'selected', cursorStyle = 'pointer'): void {
+  applyStyle(element: HTMLElement, styleType: 'hover' | 'selected'): void {
     this.storeStyle(element);
     const bgColor = styleType === 'hover' ? HOVER_BG_COLOR : SELECTED_BG_COLOR;
     const outlineStyle = styleType === 'hover' ? HOVER_OUTLINE : SELECTED_OUTLINE;
 
-    element.style.cursor = cursorStyle;
     element.style.backgroundColor = bgColor;
     element.style.outline = outlineStyle;
-    element.style.transition = 'background-color 0.15s ease-in-out, cursor 0.15s ease-in-out, outline 0.15s ease-in-out';
+    element.style.transition = 'background-color 0.15s ease-in-out, outline 0.15s ease-in-out';
   }
 
   restoreStyle(element: HTMLElement | null): void {
@@ -79,12 +77,10 @@ export class UIManager {
 
     const styles = this.originalStyles.get(element);
     if (styles) {
-      element.style.cursor = styles.cursor;
       element.style.backgroundColor = styles.backgroundColor;
       element.style.transition = styles.transition;
       element.style.outline = styles.outline;
 
-      if (!element.style.cursor) element.style.removeProperty('cursor');
       if (!element.style.backgroundColor) element.style.removeProperty('background-color');
       if (!element.style.transition) element.style.removeProperty('transition');
       if (!element.style.outline) element.style.removeProperty('outline');
@@ -225,7 +221,8 @@ export class UIManager {
       borderRadius: TOOLBAR_RADIUS,
       boxShadow: TOOLBAR_SHADOW,
       fontSize: TOOLBAR_FONT_SIZE,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', // Common system font stack
+      fontFamily:
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', // Common system font stack
       lineHeight: '1.4', // Adjusted line height
       cursor: 'pointer', // Make the div itself clickable
       opacity: '0',
@@ -246,8 +243,10 @@ export class UIManager {
     document.body.appendChild(this.copyToolbar);
 
     // Trigger the animation (fade-in and move up)
-    requestAnimationFrame(() => { // Ensures styles are applied before transition starts
-      if (this.copyToolbar) { // Check if it still exists
+    requestAnimationFrame(() => {
+      // Ensures styles are applied before transition starts
+      if (this.copyToolbar) {
+        // Check if it still exists
         this.copyToolbar.style.opacity = '1';
         this.copyToolbar.style.transform = 'translateY(0)';
       }
@@ -286,9 +285,9 @@ export class UIManager {
     // Note: This assumes only one button can exist. If multiple instances
     // of UIManager could exist, this logic needs refinement.
     if (this.scrollListenerAttached) {
-       window.removeEventListener('scroll', this.handleScroll, { capture: true });
-       this.scrollListenerAttached = false;
-       this.isScrollUpdatePending = false; // Reset RAF flag
+      window.removeEventListener('scroll', this.handleScroll, { capture: true });
+      this.scrollListenerAttached = false;
+      this.isScrollUpdatePending = false; // Reset RAF flag
     }
   }
 
@@ -318,36 +317,32 @@ export class UIManager {
       // Restore button appearance after a delay
       setTimeout(() => {
         if (this.copyToolbar === toolbar) {
-           // Restore the original text (which might include the shortcut)
+          // Restore the original text (which might include the shortcut)
           this.updateButtonState('idle', originalText ?? undefined);
         }
       }, 1500);
     }
   };
 
-  private updateButtonState(
-    state: 'idle' | 'copying' | 'copied' | 'error',
-    text?: string
-  ): void {
+  private updateButtonState(state: 'idle' | 'copying' | 'copied' | 'error', text?: string): void {
     if (!this.copyToolbar) return;
 
     switch (state) {
       case 'idle':
-        // Use the provided text, or default back to base + shortcut if no text provided
-        this.copyToolbar.textContent = text || `${TOOLBAR_TEXT_COPY_BASE}${this.copyShortcutString ? ` (${this.copyShortcutString})` : ''}`;
-        this.copyToolbar.style.cursor = 'pointer'; // Restore cursor
+        this.copyToolbar.textContent =
+          text ||
+          `${TOOLBAR_TEXT_COPY_BASE}${
+            this.copyShortcutString ? ` (${this.copyShortcutString})` : ''
+          }`;
         break;
       case 'copying':
         this.copyToolbar.textContent = 'Copying...';
-        this.copyToolbar.style.cursor = 'default'; // Indicate busy
         break;
       case 'copied':
         this.copyToolbar.textContent = 'Copied!';
-        this.copyToolbar.style.cursor = 'default';
         break;
       case 'error':
         this.copyToolbar.textContent = text || 'Error!';
-        this.copyToolbar.style.cursor = 'default';
         break;
     }
   }
@@ -386,7 +381,8 @@ export class UIManager {
       borderRadius: '6px',
       color: '#FFFFFF', // White text generally works well
       fontSize: '14px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif',
+      fontFamily:
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       zIndex: '2147483647', // Max z-index
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       opacity: '0', // Start invisible for animation
@@ -398,17 +394,18 @@ export class UIManager {
     // Type-specific background color
     if (type === 'success') {
       this.toastElement.style.backgroundColor = '#2D3748'; // Dark gray (like toolbar)
-    } else { // error
+    } else {
+      // error
       this.toastElement.style.backgroundColor = '#C53030'; // Tailwind Red 700
     }
 
     // Append to body and trigger animation
     document.body.appendChild(this.toastElement);
     requestAnimationFrame(() => {
-       if (this.toastElement) {
-           this.toastElement.style.opacity = '1';
-           this.toastElement.style.transform = 'translateX(-50%) translateY(0)';
-       }
+      if (this.toastElement) {
+        this.toastElement.style.opacity = '1';
+        this.toastElement.style.transform = 'translateX(-50%) translateY(0)';
+      }
     });
 
     // Set timeout to hide and remove the toast
@@ -418,11 +415,11 @@ export class UIManager {
         this.toastElement.style.transform = 'translateX(-50%) translateY(10px)';
         // Remove from DOM after transition ends
         setTimeout(() => {
-           if (this.toastElement && this.toastElement.parentNode) {
-                this.toastElement.parentNode.removeChild(this.toastElement);
-                this.toastElement = null;
-                this.toastTimeoutId = null; // Clear the ID after removal
-           }
+          if (this.toastElement && this.toastElement.parentNode) {
+            this.toastElement.parentNode.removeChild(this.toastElement);
+            this.toastElement = null;
+            this.toastTimeoutId = null; // Clear the ID after removal
+          }
         }, 300); // Match transition duration
       }
     }, duration); // Use provided duration
@@ -435,22 +432,6 @@ export class UIManager {
     // Only remove the button if it's associated with the element being cleared
     if (element && this.selectedElementRef === element) {
       this.removeCopyButton();
-    }
-  }
-}
-
-// === Cursor Helpers ===
-
-export function setBodyCursor(cursor: string): void {
-  document.body.style.cursor = cursor;
-}
-
-export function restoreBodyCursor(originalCursor: string | null): void {
-  if (originalCursor !== null) {
-    document.body.style.cursor = originalCursor;
-    if (!document.body.style.cursor) {
-      // Clean up inline style if the original was empty
-      document.body.style.removeProperty('cursor');
     }
   }
 }

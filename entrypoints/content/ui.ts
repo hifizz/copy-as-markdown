@@ -1,3 +1,5 @@
+import { TOOLBAR_TEXT_COPY_BASE } from './constants'; // Import base text constant
+
 /**
  * Manages UI elements and interactions for the CopyAsMarkdown feature,
  * including styling, button creation, and cursor changes.
@@ -36,9 +38,16 @@ export class UIManager {
   private lastToolbarRect: DOMRect | null = null;
   private toastElement: HTMLDivElement | null = null; // Element for the toast message
   private toastTimeoutId: number | null = null; // Timeout ID for hiding toast
+  private copyShortcutString: string = ''; // <-- Add variable to store shortcut
 
   constructor(copyHandler: CopyFunction) {
     this.copyHandler = copyHandler;
+  }
+
+  // Method to receive and store the shortcut string
+  setCopyShortcutString(shortcut: string): void {
+    console.log('[UIManager] Setting copy shortcut string:', shortcut);
+    this.copyShortcutString = shortcut;
   }
 
   // --- Style Management ---
@@ -199,7 +208,14 @@ export class UIManager {
     this.selectedElementRef = targetElement; // Associate button with this element
 
     this.copyToolbar = document.createElement('div');
-    this.copyToolbar.textContent = 'Copy as markdown (Option + shift + C)';
+
+    // Construct button text using base constant and stored shortcut
+    let buttonText = TOOLBAR_TEXT_COPY_BASE;
+    if (this.copyShortcutString) {
+      buttonText += ` (${this.copyShortcutString})`;
+    }
+    this.copyToolbar.textContent = buttonText;
+
     Object.assign(this.copyToolbar.style, {
       position: 'fixed',
       zIndex: '2147483647',
@@ -282,7 +298,8 @@ export class UIManager {
     if (!this.selectedElementRef || !this.copyToolbar) return;
 
     const toolbar = this.copyToolbar;
-    const originalText = toolbar.textContent;
+    // Use the constructed text potentially including the shortcut
+    const originalText = toolbar.textContent; // Capture the current text
 
     this.updateButtonState('copying');
 
@@ -300,8 +317,8 @@ export class UIManager {
     } finally {
       // Restore button appearance after a delay
       setTimeout(() => {
-        // Check if the button still exists and wasn't removed/replaced
         if (this.copyToolbar === toolbar) {
+           // Restore the original text (which might include the shortcut)
           this.updateButtonState('idle', originalText ?? undefined);
         }
       }, 1500);
@@ -316,7 +333,8 @@ export class UIManager {
 
     switch (state) {
       case 'idle':
-        this.copyToolbar.textContent = text || 'Copy as markdown';
+        // Use the provided text, or default back to base + shortcut if no text provided
+        this.copyToolbar.textContent = text || `${TOOLBAR_TEXT_COPY_BASE}${this.copyShortcutString ? ` (${this.copyShortcutString})` : ''}`;
         this.copyToolbar.style.cursor = 'pointer'; // Restore cursor
         break;
       case 'copying':

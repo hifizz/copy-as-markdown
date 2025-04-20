@@ -3,6 +3,9 @@ import { defineContentScript } from '#imports';
 // Import the utility object from the refactored file
 import { markdownUtils } from './content/copyAsMarkdown';
 
+// Store the shortcut string received from the background script
+let currentShortcutCopy = '';
+
 export default defineContentScript({
   matches: ['<all_urls>'], // Modify matches as needed
   main() {
@@ -15,6 +18,13 @@ export default defineContentScript({
     // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
       console.log('Message received in content script:', message);
+
+      // Store/Update the shortcut string if received
+      if (message?.shortcutCopy) {
+        currentShortcutCopy = message.shortcutCopy;
+        // Pass the shortcut string to the UI manager
+        markdownUtils.setCopyShortcutString(currentShortcutCopy);
+      }
 
       // Handle 'startSelection'
       if (message && message.action === 'startSelection') {

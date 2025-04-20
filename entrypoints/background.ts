@@ -1,18 +1,18 @@
 import { defineBackground } from '#imports';
+import {
+  CONTEXT_MENU_ID_COPY,
+  CONTEXT_MENU_ID_PICK,
+  COMMAND_COPY_SELECTION,
+  COMMAND_PICK_ELEMENT,
+  BASE_SHORTCUT_COPY_SELECTION,
+  BASE_SHORTCUT_PICK_ELEMENT,
+  TITLE_COPY_SELECTION,
+  TITLE_PICK_ELEMENT,
+} from './content/constants'; // Import constants
 
-// Define IDs for both menu items
-const CONTEXT_MENU_ID_COPY = 'copy-as-markdown-selection'; // For direct copy of selection
-const CONTEXT_MENU_ID_PICK = 'pick-element-copy-as-markdown'; // For picking an element
-
-// Define Command Names (must match manifest)
-const COMMAND_COPY_SELECTION = 'copy-selection-as-markdown';
-const COMMAND_PICK_ELEMENT = 'pick-element-as-markdown';
-
-// Base keys (Modifier will be determined dynamically)
-const BASE_SHORTCUT_COPY_SELECTION = 'Shift+C';
-const BASE_SHORTCUT_PICK_ELEMENT = 'Shift+E';
-// Base modifier defined in manifest
-const MANIFEST_MODIFIER = 'Alt';
+// Store the determined shortcut string globally in the background script
+let dynamicShortcutCopy = '';
+let dynamicShortcutPick = '';
 
 export default defineBackground({
   // permissions: ['contextMenus'], // Use wxt.config.ts
@@ -20,26 +20,29 @@ export default defineBackground({
   main() {
     console.log('Background script loaded');
 
-    // --- Context Menu Setup ---
-    chrome.runtime.onInstalled.addListener(async () => {
-      console.log('onInstalled event triggered. Getting platform info...');
+    // --- Determine Shortcuts and Setup Context Menus --- Function hoisted
+    setupShortcutsAndMenus();
+
+    // Hoisted function for initial setup
+    async function setupShortcutsAndMenus() {
+      console.log('setupShortcutsAndMenus: Getting platform info...');
       try {
         const platformInfo = await chrome.runtime.getPlatformInfo();
         console.log('Platform Info:', platformInfo);
         const isMac = platformInfo.os === 'mac';
-        // Use Option for Mac, Alt for others, matching the manifest definition
         const modifierKey = isMac ? 'Option' : 'Alt';
 
-        const shortcutCopy = `${modifierKey}+${BASE_SHORTCUT_COPY_SELECTION}`;
-        const shortcutPick = `${modifierKey}+${BASE_SHORTCUT_PICK_ELEMENT}`;
+        // Store the dynamically determined full shortcut strings
+        dynamicShortcutCopy = `${modifierKey}+${BASE_SHORTCUT_COPY_SELECTION}`;
+        dynamicShortcutPick = `${modifierKey}+${BASE_SHORTCUT_PICK_ELEMENT}`;
 
-        // Update context menus after getting platform info
-        updateContextMenu(CONTEXT_MENU_ID_COPY, `Copy as Markdown (${shortcutCopy})`, [
+        // Update context menus using constants and dynamic shortcuts
+        updateContextMenu(CONTEXT_MENU_ID_COPY, `${TITLE_COPY_SELECTION} (${dynamicShortcutCopy})`, [
           'selection' as chrome.contextMenus.ContextType,
         ]);
         updateContextMenu(
           CONTEXT_MENU_ID_PICK,
-          `Pick Element to Copy as Markdown (${shortcutPick})`,
+          `${TITLE_PICK_ELEMENT} (${dynamicShortcutPick})`,
           [
             'page' as chrome.contextMenus.ContextType,
             'selection' as chrome.contextMenus.ContextType,
@@ -48,10 +51,18 @@ export default defineBackground({
         );
       } catch (error) {
         console.error('Error getting platform info or updating context menus:', error);
-        // Fallback to default titles if platform info fails?
-        // For simplicity, we might just log the error for now.
+        // Fallback to base titles if platform info fails
+        updateContextMenu(CONTEXT_MENU_ID_COPY, TITLE_COPY_SELECTION, ['selection' as chrome.contextMenus.ContextType]);
+        updateContextMenu(CONTEXT_MENU_ID_PICK, TITLE_PICK_ELEMENT, [
+          'page' as chrome.contextMenus.ContextType,
+          'selection' as chrome.contextMenus.ContextType,
+          'image' as chrome.contextMenus.ContextType,
+        ]);
       }
-    });
+    }
+
+    // --- Context Menu Setup (Listener remains) ---
+    chrome.runtime.onInstalled.addListener(setupShortcutsAndMenus);
 
     // Helper function to create/update context menu
     function updateContextMenu(
@@ -100,7 +111,8 @@ export default defineBackground({
         }
 
         if (action) {
-          sendMessageToTab(tab.id, action, String(info.menuItemId));
+          // Pass the dynamic shortcut for copying (for the UI button)
+          sendMessageToTab(tab.id, action, String(info.menuItemId), dynamicShortcutCopy);
         } else {
           console.log('Ignoring context menu click:', info, tab);
         }
@@ -123,12 +135,18 @@ export default defineBackground({
       }
 
       if (action) {
-        sendMessageToTab(tabId, action, command);
+        // Pass the dynamic shortcut for copying (for the UI button)
+        sendMessageToTab(tabId, action, command, dynamicShortcutCopy);
       }
     });
 
-    // --- Helper function to send messages ---
-    function sendMessageToTab(tabId: number | undefined, action: string, triggerSource: string) {
+    // --- Helper function to send messages (add shortcut param) ---
+    function sendMessageToTab(
+      tabId: number | undefined,
+      action: string,
+      triggerSource: string,
+      shortcutCopy?: string // Add optional shortcut string
+    ) {
       if (tabId === undefined) {
         console.error(
           `Cannot send message for action "${action}" (triggered by ${triggerSource}): Tab ID is undefined.`
@@ -136,7 +154,8 @@ export default defineBackground({
         return;
       }
       console.log(`Triggered by "${triggerSource}", sending action "${action}" to tab:`, tabId);
-      chrome.tabs.sendMessage(tabId, { action: action }, (response: any) => {
+      // Include shortcutCopy in the message payload
+      chrome.tabs.sendMessage(tabId, { action: action, shortcutCopy: shortcutCopy }, (response: any) => {
         if (chrome.runtime.lastError) {
           console.error(
             `Error sending message for action "${action}" (triggered by ${triggerSource}):`,

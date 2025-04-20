@@ -475,6 +475,15 @@ const markdownCopier = (() => {
     }
   }
 
+  // NEW: Method to pass shortcut string to UIManager
+  function setCopyShortcutString(shortcut: string): void {
+    if (uiManager) {
+      uiManager.setCopyShortcutString(shortcut);
+    } else {
+      console.warn('UIManager not ready to receive shortcut string.');
+    }
+  }
+
   // Return the public API
   return {
     init: initializeTurndownService, // Expose init function
@@ -484,6 +493,7 @@ const markdownCopier = (() => {
     copyElementAsMarkdown, // Expose this core function
     getSelectedElement, // Expose getter for selected element
     showToast, // Expose toast function
+    setCopyShortcutString, // Expose the new method
   };
 })();
 

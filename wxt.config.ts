@@ -4,6 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
+    name: 'Copy as Markdown',
     // Explicitly add permissions here if auto-detection fails
     permissions: [
       "contextMenus",

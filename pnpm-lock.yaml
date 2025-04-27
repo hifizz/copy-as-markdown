@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  butteruptoasts:
+    specifier: ^2.0.1
+    version: 2.0.1
   react:
     specifier: ^19.1.0
     version: 19.1.0
@@ -1109,6 +1112,10 @@ packages:
       mv: 2.1.1
       safe-json-stringify: 1.2.0
     dev: true
+
+  /butteruptoasts@2.0.1:
+    resolution: {integrity: sha512-UnXU7a2lTBLKVA2iwzK4+uqN/Pxhs/C9HBIF70eOvdXr9P3c1HmksoqAkHLZFe+yZT7ALHFfTGEM7jJ/lSc/9Q==}
+    dev: false
 
   /c12@3.0.3(magicast@0.3.5):
     resolution: {integrity: sha512-uC3MacKBb0Z15o5QWCHvHWj5Zv34pGQj9P+iXKSpTuSGFS0KKhUWf4t9AJ+gWjYOdmWCPEGpEzm8sS0iqbpo1w==}

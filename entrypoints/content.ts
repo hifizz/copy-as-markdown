@@ -3,6 +3,7 @@ import { defineContentScript } from '#imports';
 // Import the utility object from the refactored file
 import { markdownUtils } from './content/copyAsMarkdown';
 
+
 // Store the shortcut string received from the background script
 let currentShortcutCopy = '';
 
@@ -45,7 +46,7 @@ export default defineContentScript({
           markdownUtils.copyElementAsMarkdown(selectedPickerElement)
             .then((markdown) => {
               console.log('Picker element copied successfully.');
-              markdownUtils.showToast('✓ Copied Element as Markdown', 'success');
+              markdownUtils.showToast('Copied Element as Markdown', 'success');
               markdownUtils.clearSelection();
               sendResponse({ status: 'elementCopied' });
             })
@@ -73,7 +74,7 @@ export default defineContentScript({
               markdownUtils.copyHtmlAsMarkdown(selectedHtml)
                 .then(() => {
                   console.log('Text selection copied successfully.');
-                  markdownUtils.showToast('✓ Copied Selection as Markdown', 'success'); // Use unified toast
+                  markdownUtils.showToast('Copied Selection as Markdown', 'success'); // Use unified toast
                   sendResponse({ status: 'selectionCopied' });
                 })
                 .catch((error) => {

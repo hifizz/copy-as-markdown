@@ -1,4 +1,10 @@
+import butterup from 'butteruptoasts';
+// In your CSS or JavaScript file
+import 'butteruptoasts/src/butterup.css';
 import { TOOLBAR_TEXT_COPY_BASE } from './constants'; // Import base text constant
+
+butterup.options.maxToasts = 1;
+butterup.options.toastLife = 3000;
 
 /**
  * Manages UI elements and interactions for the CopyAsMarkdown feature,
@@ -18,28 +24,16 @@ const REPICK_BUTTON_HOVER_BG = 'rgba(255, 255, 255, 0.1)'; // Same as cancel for
 const TOOLBAR_BG = '#2D3748'; // Gray-800
 const TOOLBAR_TEXT = '#E2E8F0'; // Gray-300
 const TOOLBAR_PADDING = '6px 12px';
-const TOOLBAR_RADIUS = '6px';
+const TOOLBAR_RADIUS = '4px';
 const TOOLBAR_SHADOW = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
 const TOOLBAR_FONT_SIZE = '13px';
 const TOOLBAR_TRANSITION = 'opacity 0.2s ease-out, transform 0.2s ease-out';
 const MAX_Z_INDEX = '2147483647'; // Use constant for z-index
 
-// Toast Styles (similar structure)
-const TOAST_PADDING = '10px 20px';
-const TOAST_RADIUS = '6px';
-const TOAST_FONT_SIZE = '14px';
-const TOAST_TEXT_COLOR = '#FFFFFF';
-const TOAST_SUCCESS_BG = '#16A34A'; // Tailwind Green-600
-const TOAST_ERROR_BG = '#C53030';   // Tailwind Red-700
-const TOAST_SHADOW = '0 4px 12px rgba(0, 0, 0, 0.15)';
-const TOAST_TRANSITION = 'opacity 0.3s ease-out, transform 0.3s ease-out';
-const TOAST_FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-
 // === Types ===
 type CopyFunction = (element: Element) => Promise<string>;
 type StyleRecord = { backgroundColor: string; transition: string; outline: string };
-type CancelCallback = () => void; // Type for the cancel callback
-type RepickCallback = () => void; // Type for the repick callback
+
 
 // === DOM Creation Helper Function ===
 
@@ -114,32 +108,7 @@ function createCopyToolbarDOM(
   return { toolbarDiv, textSpan, repickSpan, cancelSpan };
 }
 
-/**
- * Creates the basic DOM structure and applies static styles for a toast notification.
- * Does not handle positioning, animations, or DOM insertion/removal.
- */
-function createToastDOM(message: string, type: 'success' | 'error'): HTMLDivElement {
-  const toastElement = document.createElement('div');
-  toastElement.textContent = message;
-
-  // Base styles for the toast
-  Object.assign(toastElement.style, {
-    padding: TOAST_PADDING,
-    borderRadius: TOAST_RADIUS,
-    color: TOAST_TEXT_COLOR,
-    fontSize: TOAST_FONT_SIZE,
-    fontFamily: TOAST_FONT_FAMILY,
-    zIndex: MAX_Z_INDEX,
-    boxShadow: TOAST_SHADOW,
-    textAlign: 'center',
-    maxWidth: '80%',
-  } as Partial<CSSStyleDeclaration>);
-
-  // Type-specific background color
-  toastElement.style.backgroundColor = type === 'success' ? TOAST_SUCCESS_BG : TOAST_ERROR_BG;
-
-  return toastElement;
-}
+const noop = () => {};
 
 // === UI Manager Class ===
 
@@ -153,16 +122,14 @@ export class UIManager {
   private copyHandler: CopyFunction;
   private scrollListenerAttached = false;
   private isScrollUpdatePending = false;
-  private lastTargetRect: DOMRect | null = null;
-  private lastToolbarRect: DOMRect | null = null;
-  private toastElement: HTMLDivElement | null = null;
-  private toastTimeoutId: number | null = null;
   private copyShortcutString: string = '';
-  private onCancelCallback: CancelCallback = () => {};
-  private onRepickCallback: RepickCallback = () => {};
+  private onCancelCallback = noop;
+  private onRepickCallback = noop;
 
-  constructor(copyHandler: CopyFunction) {
+  constructor({ copyHandler, onCancelCallback, onRepickCallback }: { copyHandler: CopyFunction; onCancelCallback: CancelCallback, onRepickCallback: RepickCallback }) {
     this.copyHandler = copyHandler;
+    this.onCancelCallback = onCancelCallback;
+    this.onRepickCallback = onRepickCallback;
   }
 
   // Getter for the toolbar element
@@ -176,15 +143,6 @@ export class UIManager {
     this.copyShortcutString = shortcut;
   }
 
-  // Method to set the cancel handler from the main logic
-  setCancelHandler(callback: CancelCallback): void {
-    this.onCancelCallback = callback;
-  }
-
-  // Method to set the repick handler
-  setRepickHandler(callback: RepickCallback): void {
-    this.onRepickCallback = callback;
-  }
 
   // --- Style Management ---
 
@@ -241,7 +199,6 @@ export class UIManager {
     toolbarWidth: number, // Added parameter
     toolbarHeight: number // Added parameter
   ): { top: number; left: number } {
-
     // Calculate initial desired position (centered BELOW)
     let desiredTop = targetRect.bottom + 8; // 8px margin below
     let desiredLeft = targetRect.left + targetRect.width / 2 - toolbarWidth / 2;
@@ -273,7 +230,7 @@ export class UIManager {
 
   private _updateButtonPositionOnScroll(): void {
     if (!this.selectedElementRef || !this.copyToolbar) {
-        return;
+      return;
     }
 
     const targetRect = this.selectedElementRef.getBoundingClientRect();
@@ -287,7 +244,7 @@ export class UIManager {
     // Apply the new position
     this.copyToolbar.style.left = `${newPosition.left}px`;
     this.copyToolbar.style.top = `${newPosition.top}px`;
-}
+  }
 
   // Scroll handler throttled with requestAnimationFrame
   private handleScroll = () => {
@@ -336,10 +293,10 @@ export class UIManager {
 
     // 5. Add listeners
     this.repickSpan.addEventListener('mouseenter', () => {
-        if (this.repickSpan) this.repickSpan.style.backgroundColor = REPICK_BUTTON_HOVER_BG;
+      if (this.repickSpan) this.repickSpan.style.backgroundColor = REPICK_BUTTON_HOVER_BG;
     });
     this.repickSpan.addEventListener('mouseleave', () => {
-        if (this.repickSpan) this.repickSpan.style.backgroundColor = 'transparent';
+      if (this.repickSpan) this.repickSpan.style.backgroundColor = 'transparent';
     });
     this.repickSpan.addEventListener('click', this.handleRepickButtonClick);
 
@@ -389,7 +346,7 @@ export class UIManager {
       // Remove listeners
       this.copyToolbar.removeEventListener('click', this.handleMainActionClick);
       if (this.repickSpan) {
-          this.repickSpan.removeEventListener('click', this.handleRepickButtonClick);
+        this.repickSpan.removeEventListener('click', this.handleRepickButtonClick);
       }
       if (this.cancelSpan) {
         this.cancelSpan.removeEventListener('click', this.handleCancelButtonClick);
@@ -440,22 +397,30 @@ export class UIManager {
     this.updateButtonState('copying');
 
     try {
-      await this.copyHandler(this.selectedElementRef);
+      const copiedText = await this.copyHandler(this.selectedElementRef); // Assuming copyHandler might return the text or confirmation
       this.updateButtonState('copied');
+      // --- Use butterup toast for success ---
+      this.showToast('Copied to clipboard!', 'success');
+      // Optional: Log the copied text for debugging
+      // console.log('Copied content:', copiedText);
     } catch (err: unknown) {
       console.error(
         'CopyAsMarkdown: Copy process failed via UI:',
         err instanceof Error ? err.message : err
       );
       const errorMessage = err instanceof Error ? err.message : String(err);
-      this.updateButtonState('error', `Error!`);
-      alert(`Copy failed: ${errorMessage}`);
+      this.updateButtonState('error', 'Error!'); // Keep button state update
+      // --- Use butterup toast for error, remove alert ---
+      this.showToast(`Copy failed: ${errorMessage}`, 'error');
+      // alert(`Copy failed: ${errorMessage}`); // Remove this line
     } finally {
+      // Keep the timeout to reset the button state
       setTimeout(() => {
-        if (this.copyToolbar === toolbar) { // Check if same toolbar instance
+        if (this.copyToolbar === toolbar) {
+          // Check if same toolbar instance
           this.updateButtonState('idle', originalText ?? undefined);
         }
-      }, 1500);
+      }, 1500); // Consider adjusting duration based on toast visibility
     }
   };
 
@@ -468,15 +433,12 @@ export class UIManager {
 
   // Handler for the repick button click
   private handleRepickButtonClick = (e: MouseEvent): void => {
-      e.stopPropagation();
-      console.log('[UIManager] Repick button clicked.');
-      this.onRepickCallback(); // Trigger the repick logic
+    e.stopPropagation();
+    console.log('[UIManager] Repick button clicked.');
+    this.onRepickCallback(); // Trigger the repick logic
   };
 
-  private updateButtonState(
-    state: 'idle' | 'copying' | 'copied' | 'error',
-    text?: string
-  ): void {
+  private updateButtonState(state: 'idle' | 'copying' | 'copied' | 'error', text?: string): void {
     // Target the textSpan for updates
     if (!this.textSpan) return;
 
@@ -484,7 +446,9 @@ export class UIManager {
       case 'idle':
         this.textSpan.textContent =
           text ||
-          `${TOOLBAR_TEXT_COPY_BASE}${this.copyShortcutString ? ` (${this.copyShortcutString})` : ''}`;
+          `${TOOLBAR_TEXT_COPY_BASE}${
+            this.copyShortcutString ? ` (${this.copyShortcutString})` : ''
+          }`;
         break;
       case 'copying':
         this.textSpan.textContent = 'Copying...';
@@ -498,63 +462,26 @@ export class UIManager {
     }
   }
 
-  // --- Toast Notification ---
-
   /**
-   * Displays a short-lived toast message on the screen.
+   * Displays a short-lived toast message on the screen using Butterup.
    * @param message The text content of the toast.
-   * @param type Controls the background color ('success' or 'error').
-   * @param duration How long the toast should be visible in milliseconds.
+   * @param type Controls the style and icon ('success' or 'error').
+   * @param duration How long the toast should be visible in milliseconds. Defaults to 3000ms for success, 5000ms for error.
    */
-  showToast(message: string, type: 'success' | 'error', duration: number = 2500): void {
-    // Clear any existing toast timeout
-    if (this.toastTimeoutId) {
-      clearTimeout(this.toastTimeoutId);
-      this.toastTimeoutId = null;
-    }
-    // Remove existing toast element immediately if present
-    if (this.toastElement && this.toastElement.parentNode) {
-      this.toastElement.parentNode.removeChild(this.toastElement);
-      this.toastElement = null;
-    }
+  showToast(message: string, type: 'success' | 'error', duration?: number): void {
+    const defaultDuration = type === 'success' ? 3000 : 5000;
+    const toastDuration = duration ?? defaultDuration;
 
-    // --- Create the toast element using the helper ---
-    this.toastElement = createToastDOM(message, type);
+    butterup.toast({
+      title: type === 'success' ? 'Success!' : 'Error!',
+      message: message,
+      location: 'top-right', // Or 'top-right', 'bottom-center', etc.
+      icon: true, // Use predefined icons for success/error
+      // dismissable: true, // Allow users to dismiss the toast by clicking
+      type: type, // Set the style ('success' or 'error')
 
-    // --- Apply dynamic styles and animation logic ---
-    Object.assign(this.toastElement.style, {
-      position: 'fixed',
-      top: '20px',
-      left: '50%',
-      transform: 'translateX(-50%) translateY(-20px)',
-      opacity: '0',
-      transition: TOAST_TRANSITION,
-    } as Partial<CSSStyleDeclaration>);
-
-    // Append to body and trigger animation
-    document.body.appendChild(this.toastElement);
-    requestAnimationFrame(() => {
-      if (this.toastElement) {
-        this.toastElement.style.opacity = '1';
-        this.toastElement.style.transform = 'translateX(-50%) translateY(0)';
-      }
     });
 
-    // Set timeout to hide and remove the toast
-    this.toastTimeoutId = window.setTimeout(() => {
-      if (this.toastElement) {
-        this.toastElement.style.opacity = '0';
-        this.toastElement.style.transform = 'translateX(-50%) translateY(-20px)';
-        // Remove from DOM after transition ends
-        setTimeout(() => {
-          if (this.toastElement && this.toastElement.parentNode) {
-            this.toastElement.parentNode.removeChild(this.toastElement);
-            this.toastElement = null;
-            this.toastTimeoutId = null; // Clear the ID after removal
-          }
-        }, 300); // Match transition duration
-      }
-    }, duration); // Use provided duration
   }
 
   // --- Cleanup ---

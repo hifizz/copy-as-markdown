@@ -20,7 +20,6 @@ const markdownCopier = (() => {
   let selectedElement: HTMLElement | null = null;
   let turndownService: TurndownService | null = null;
   let isTurndownInitialized = false;
-  let originalBodyCursor: string | null = null;
   let boundHandleMouseOver: ((event: MouseEvent) => void) | null = null;
   let boundHandleMouseOut: ((event: MouseEvent) => void) | null = null;
   let boundHandleClick: ((event: MouseEvent) => void) | null = null;
@@ -28,7 +27,11 @@ const markdownCopier = (() => {
   let boundHandleClickOutside: ((event: MouseEvent) => void) | null = null; // Listener for clicking outside
 
   // Instantiate the UI Manager
-  let uiManager: UIManager | null = null;
+  let uiManager = new UIManager({
+    copyHandler: copyElementAsMarkdown,
+    onCancelCallback: triggerClearSelection,
+    onRepickCallback: triggerRepick,
+  });
 
   // Define the cancellation trigger function
   function triggerClearSelection(): void {
@@ -139,13 +142,6 @@ const markdownCopier = (() => {
     }
   }
 
-  // Initialize the UI Manager *after* copyElementAsMarkdown is defined.
-  uiManager = new UIManager(copyElementAsMarkdown);
-  // Set the cancel handler *after* uiManager is initialized
-  uiManager.setCancelHandler(triggerClearSelection);
-  // Set the repick handler *after* uiManager is initialized
-  uiManager.setRepickHandler(triggerRepick);
-
   // === UI & Event Handling ===
 
   /**
@@ -154,7 +150,7 @@ const markdownCopier = (() => {
    * @param {MouseEvent} event The mouse event.
    */
   function handleMouseOver(event: MouseEvent): void {
-    if (!selectorActive || !uiManager) return;
+    if (!selectorActive) return;
     const target = event.target as Node | null;
 
     // Ignore irrelevant targets (including the copy button managed by UIManager, ideally checked via a method if needed)
@@ -204,8 +200,7 @@ const markdownCopier = (() => {
       !selectorActive ||
       !currentHoverElement ||
       currentHoverElement === selectedElement ||
-      event.target !== currentHoverElement || // Ensure event originated from the currently hovered element
-      !uiManager
+      event.target !== currentHoverElement
     ) {
       return;
     }
@@ -237,7 +232,7 @@ const markdownCopier = (() => {
     if (uiToolbar && uiToolbar.contains(event.target as Node)) return;
 
     // Requires active selection mode and a currently hovered element
-    if (!selectorActive || !currentHoverElement || !uiManager) return;
+    if (!selectorActive || !currentHoverElement) return;
 
     // Ensure currentHoverElement is an HTMLElement before proceeding
     if (!(currentHoverElement instanceof HTMLElement)) return;
@@ -297,6 +292,9 @@ const markdownCopier = (() => {
       'selectorActive:',
       selectorActive
     );
+    /**
+     * Handle Escape key to stop selection mode
+     */
     if (event.key === 'Escape') {
       if (selectorActive) {
         // If actively picking, stop the mode completely
@@ -384,12 +382,6 @@ const markdownCopier = (() => {
         return;
       }
     }
-    // Ensure UI manager is initialized
-    if (!uiManager) {
-      console.error('CopyAsMarkdown Error: UI Manager not initialized.');
-      alert('CopyAsMarkdown Error: Internal UI component failed to initialize.');
-      return;
-    }
 
     if (selectorActive) {
       console.log('CopyAsMarkdown: Selection mode already active.');
@@ -412,37 +404,7 @@ const markdownCopier = (() => {
     selectorActive = true;
 
     // --- Apply initial hover near viewport center ---
-    try {
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      const initialElement = document.elementFromPoint(centerX, centerY);
-
-      console.log('[copyAsMarkdown] Initial element:', initialElement);
-
-      // Check if element is valid, hoverable, not body, and an HTMLElement
-      if (
-        initialElement &&
-        initialElement instanceof HTMLElement &&
-        isElementHoverable(initialElement) &&
-        initialElement !== document.body
-      ) {
-        if (uiManager) {
-          // Ensure UI Manager is ready
-          console.log(
-            '[copyAsMarkdown] Applying initial hover to element near viewport center:',
-            initialElement
-          );
-          uiManager.applyStyle(initialElement, 'hover');
-          currentHoverElement = initialElement; // Set as current hover for subsequent logic
-        }
-      } else {
-        console.log(
-          '[copyAsMarkdown] No suitable initial hover element found near viewport center.'
-        );
-      }
-    } catch (e) {
-      console.warn('[copyAsMarkdown] Error finding or styling initial hover element:', e);
-    }
+    tryToAutoHoverElement();
     // --- End initial hover ---
 
     addPickModeEventListeners();
@@ -543,17 +505,43 @@ const markdownCopier = (() => {
 
   // NEW: Method to pass shortcut string to UIManager
   function setCopyShortcutString(shortcut: string): void {
-    if (uiManager) {
-      uiManager.setCopyShortcutString(shortcut);
-    } else {
-      console.warn('UIManager not ready to receive shortcut string.');
-    }
+    uiManager.setCopyShortcutString(shortcut);
   }
 
-  // NEW: Public method to clear the current selection UI and listeners
   function clearSelection(): void {
-    console.log('[copyAsMarkdown] Public clearSelection called.');
     clearSelectionAndListeners();
+  }
+
+  /**
+   * Attempts to find an element near the viewport center and apply
+   * an initial hover style if it's suitable.
+   */
+  function tryToAutoHoverElement(): void {
+    try {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const initialElement = document.elementFromPoint(centerX, centerY);
+
+      if (
+        initialElement &&
+        initialElement instanceof HTMLElement &&
+        isElementHoverable(initialElement) && // Assuming isElementHoverable is accessible
+        initialElement !== document.body
+      ) {
+          console.log(
+            '[copyAsMarkdown] Applying initial hover via auto-hover:',
+            initialElement
+          );
+          uiManager?.applyStyle(initialElement, 'hover');
+          currentHoverElement = initialElement; // Update the class property
+      } else {
+        console.log(
+          '[copyAsMarkdown] No suitable initial element found for auto-hover near viewport center.'
+        );
+      }
+    } catch (e) {
+      console.warn('[copyAsMarkdown] Error during auto-hover attempt:', e);
+    }
   }
 
   // Return the public API

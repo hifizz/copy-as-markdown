@@ -8,6 +8,7 @@ export default defineConfig({
     // Explicitly add permissions here if auto-detection fails
     permissions: [
       "contextMenus",
+      "tabs",
       // "commands", // WXT might add this automatically when commands are defined
       // Add other necessary permissions if needed, e.g., "storage"
       // WXT usually adds "scripting" automatically for content scripts

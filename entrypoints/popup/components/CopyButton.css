@@ -1,0 +1,136 @@
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  min-width: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 主要样式变体 */
+.copy-button--primary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.copy-button--primary:hover:not(:disabled) {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.copy-button--primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+}
+
+/* 次要样式变体 */
+.copy-button--secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.copy-button--secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.copy-button--secondary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 状态样式 */
+.copy-button--copying {
+  background-color: #f59e0b !important;
+  color: white !important;
+}
+
+.copy-button--success {
+  background-color: #10b981 !important;
+  color: white !important;
+}
+
+.copy-button--error {
+  background-color: #ef4444 !important;
+  color: white !important;
+}
+
+/* 文本样式 */
+.copy-button__text {
+  display: inline-block;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* 图标样式 */
+.copy-button__icon {
+  display: inline-block;
+  font-size: 1rem;
+  margin-left: 0.25rem;
+}
+
+/* 加载动画 */
+.copy-button__spinner {
+  display: inline-block;
+  font-size: 1rem;
+  margin-left: 0.25rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 320px) {
+  .copy-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+}
+
+/* 焦点样式 */
+.copy-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.3);
+}
+
+.copy-button--secondary:focus {
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.3);
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .copy-button--secondary {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+  }
+
+  .copy-button--secondary:hover:not(:disabled) {
+    background-color: #4b5563;
+    border-color: #6b7280;
+  }
+}

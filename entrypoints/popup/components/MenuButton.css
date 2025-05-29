@@ -1,0 +1,227 @@
+.menu-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border-radius: 6px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-button:hover:not(:disabled) {
+  background-color: var(--menu-button-hover-bg);
+  transform: translateX(2px);
+}
+
+.menu-button:active:not(:disabled) {
+  background-color: var(--menu-button-active-bg);
+  transform: translateX(1px);
+}
+
+.menu-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.menu-button:focus {
+  outline: none;
+  background-color: var(--menu-button-focus-bg);
+  box-shadow: 0 0 0 2px var(--menu-button-focus-ring);
+}
+
+/* 图标区域 */
+.menu-button__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease-in-out;
+}
+
+.menu-button:hover .menu-button__icon {
+  transform: scale(1.1);
+}
+
+/* 内容区域 */
+.menu-button__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-button__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--menu-button-text-primary);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.menu-button__description {
+  font-size: 12px;
+  color: var(--menu-button-text-secondary);
+  line-height: 1.3;
+  opacity: 0.8;
+}
+
+/* 加载动画区域 */
+.menu-button__spinner {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--menu-button-spinner-bg);
+  border-top: 2px solid var(--menu-button-spinner-fg);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 主要变体样式 */
+.menu-button--primary {
+  /* 主要功能按钮的特殊样式 */
+}
+
+.menu-button--primary .menu-button__label {
+  font-weight: 600;
+}
+
+.menu-button--primary:hover:not(:disabled) {
+  background-color: var(--menu-button-primary-hover-bg);
+}
+
+/* 次要变体样式 */
+.menu-button--secondary {
+  /* 次要功能按钮的样式 */
+}
+
+.menu-button--secondary .menu-button__label {
+  font-weight: 500;
+}
+
+.menu-button--secondary .menu-button__description {
+  opacity: 0.7;
+}
+
+/* 状态样式 */
+.menu-button--copying {
+  background-color: var(--menu-button-copying-bg) !important;
+  color: var(--menu-button-copying-text) !important;
+}
+
+.menu-button--copying .menu-button__icon {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.menu-button--success {
+  background-color: var(--menu-button-success-bg) !important;
+  color: var(--menu-button-success-text) !important;
+}
+
+.menu-button--success .menu-button__icon {
+  animation: bounce 0.6s ease-in-out;
+}
+
+.menu-button--error {
+  background-color: var(--menu-button-error-bg) !important;
+  color: var(--menu-button-error-text) !important;
+}
+
+.menu-button--error .menu-button__icon {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
+  60% { transform: translateY(-2px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* 响应式设计 */
+@media (max-width: 320px) {
+  .menu-button {
+    padding: 10px 12px;
+  }
+
+  .menu-button__icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    font-size: 14px;
+  }
+
+  .menu-button__label {
+    font-size: 13px;
+  }
+
+  .menu-button__description {
+    font-size: 11px;
+  }
+}
+
+/* 浅色主题变量 */
+:root {
+  --menu-button-hover-bg: rgba(0, 0, 0, 0.05);
+  --menu-button-active-bg: rgba(0, 0, 0, 0.1);
+  --menu-button-focus-bg: rgba(107, 114, 128, 0.1);
+  --menu-button-focus-ring: rgba(107, 114, 128, 0.3);
+  --menu-button-text-primary: #1f2937;
+  --menu-button-text-secondary: #6b7280;
+  --menu-button-primary-hover-bg: rgba(107, 114, 128, 0.1);
+  --menu-button-spinner-bg: rgba(0, 0, 0, 0.2);
+  --menu-button-spinner-fg: #6b7280;
+  --menu-button-copying-bg: rgba(245, 158, 11, 0.1);
+  --menu-button-copying-text: #d97706;
+  --menu-button-success-bg: rgba(16, 185, 129, 0.1);
+  --menu-button-success-text: #059669;
+  --menu-button-error-bg: rgba(239, 68, 68, 0.1);
+  --menu-button-error-text: #dc2626;
+}
+
+/* 暗色主题变量 */
+.dark {
+  --menu-button-hover-bg: rgba(255, 255, 255, 0.08);
+  --menu-button-active-bg: rgba(255, 255, 255, 0.12);
+  --menu-button-focus-bg: rgba(156, 163, 175, 0.2);
+  --menu-button-focus-ring: rgba(156, 163, 175, 0.4);
+  --menu-button-text-primary: #f9fafb;
+  --menu-button-text-secondary: #9ca3af;
+  --menu-button-primary-hover-bg: rgba(156, 163, 175, 0.2);
+  --menu-button-spinner-bg: rgba(255, 255, 255, 0.3);
+  --menu-button-spinner-fg: #9ca3af;
+  --menu-button-copying-bg: rgba(245, 158, 11, 0.2);
+  --menu-button-copying-text: #fbbf24;
+  --menu-button-success-bg: rgba(16, 185, 129, 0.2);
+  --menu-button-success-text: #34d399;
+  --menu-button-error-bg: rgba(239, 68, 68, 0.2);
+  --menu-button-error-text: #f87171;
+}

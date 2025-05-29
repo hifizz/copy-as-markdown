@@ -157,7 +157,7 @@ export function addAbsoluteLinkRule(service: TurndownService): void {
       }
 
       const titlePart = title ? ` "${title}"` : '';
-      return `[${content}](${href}${titlePart})`;
+      return `[${content?.trim()}](${href}${titlePart})`;
     },
   });
 }

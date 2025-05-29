@@ -1,5 +1,6 @@
 import TurndownService from 'turndown';
 import { detectCodeLanguage } from './dom-handler'; // Needed for pre rule
+import logger from '../../utils/logger';
 // Import constants for data attributes
 import {
   DATA_ATTR_SKIP,
@@ -120,7 +121,12 @@ export function addAbsoluteImageRule(service: TurndownService): void {
           const absoluteUrl = new URL(src, document.location.href).href;
           src = absoluteUrl;
         } catch (e: unknown) {
-          console.warn(`CopyAsMarkdown: Could not convert relative src "${src}" to absolute:`, e instanceof Error ? e.message : e);
+          logger.warn(`Could not convert relative src to absolute`, {
+            component: 'turndownRules',
+            action: 'addAbsoluteImageRule',
+            originalSrc: src,
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
       }
       return `\n\n![${alt}](${src})\n\n`;
@@ -152,7 +158,12 @@ export function addAbsoluteLinkRule(service: TurndownService): void {
           const absoluteUrl = new URL(href, document.location.href).href;
           href = absoluteUrl;
         } catch (e: unknown) {
-          console.warn(`CopyAsMarkdown: Could not convert relative href "${href}" to absolute:`, e instanceof Error ? e.message : e);
+          logger.warn(`Could not convert relative href to absolute`, {
+            component: 'turndownRules',
+            action: 'addAbsoluteLinkRule',
+            originalHref: href,
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
       }
 

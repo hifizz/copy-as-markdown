@@ -34,7 +34,6 @@ const MAX_Z_INDEX = '2147483647'; // Use constant for z-index
 type CopyFunction = (element: Element) => Promise<string>;
 type StyleRecord = { backgroundColor: string; transition: string; outline: string };
 
-
 // === DOM Creation Helper Function ===
 
 /**
@@ -126,7 +125,15 @@ export class UIManager {
   private onCancelCallback = noop;
   private onRepickCallback = noop;
 
-  constructor({ copyHandler, onCancelCallback, onRepickCallback }: { copyHandler: CopyFunction; onCancelCallback: CancelCallback, onRepickCallback: RepickCallback }) {
+  constructor({
+    copyHandler,
+    onCancelCallback,
+    onRepickCallback,
+  }: {
+    copyHandler: CopyFunction;
+    onCancelCallback: () => void;
+    onRepickCallback: () => void;
+  }) {
     this.copyHandler = copyHandler;
     this.onCancelCallback = onCancelCallback;
     this.onRepickCallback = onRepickCallback;
@@ -139,10 +146,9 @@ export class UIManager {
 
   // Method to receive and store the shortcut string
   setCopyShortcutString(shortcut: string): void {
-    console.log('[UIManager] Setting copy shortcut string:', shortcut);
+    logger.info('[UIManager] Setting copy shortcut string:', { shortcut });
     this.copyShortcutString = shortcut;
   }
-
 
   // --- Style Management ---
 
@@ -397,44 +403,39 @@ export class UIManager {
     this.updateButtonState('copying');
 
     try {
-      const copiedText = await this.copyHandler(this.selectedElementRef); // Assuming copyHandler might return the text or confirmation
+      const copiedText = await this.copyHandler(this.selectedElementRef);
       this.updateButtonState('copied');
-      // --- Use butterup toast for success ---
       this.showToast('Copied to clipboard!', 'success');
-      // Optional: Log the copied text for debugging
-      // console.log('Copied content:', copiedText);
     } catch (err: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Copy process failed via UI:',
-        err instanceof Error ? err.message : err
+        {
+          error: err instanceof Error ? err.message : err
+        }
       );
       const errorMessage = err instanceof Error ? err.message : String(err);
-      this.updateButtonState('error', 'Error!'); // Keep button state update
-      // --- Use butterup toast for error, remove alert ---
+      this.updateButtonState('error', 'Error!');
       this.showToast(`Copy failed: ${errorMessage}`, 'error');
-      // alert(`Copy failed: ${errorMessage}`); // Remove this line
     } finally {
-      // Keep the timeout to reset the button state
       setTimeout(() => {
         if (this.copyToolbar === toolbar) {
-          // Check if same toolbar instance
           this.updateButtonState('idle', originalText ?? undefined);
         }
-      }, 1500); // Consider adjusting duration based on toast visibility
+      }, 1500);
     }
   };
 
   // Handler for the cancel (X) button click
   private handleCancelButtonClick = (e: MouseEvent): void => {
     e.stopPropagation(); // Prevent triggering main action listener
-    console.log('[UIManager] Cancel button clicked.');
+    logger.info('[UIManager] Cancel button clicked.');
     this.onCancelCallback(); // Trigger the cancellation logic
   };
 
   // Handler for the repick button click
   private handleRepickButtonClick = (e: MouseEvent): void => {
     e.stopPropagation();
-    console.log('[UIManager] Repick button clicked.');
+    logger.info('[UIManager] Repick button clicked.');
     this.onRepickCallback(); // Trigger the repick logic
   };
 
@@ -475,13 +476,10 @@ export class UIManager {
     butterup.toast({
       title: type === 'success' ? 'Success!' : 'Error!',
       message: message,
-      location: 'top-right', // Or 'top-right', 'bottom-center', etc.
-      icon: true, // Use predefined icons for success/error
-      // dismissable: true, // Allow users to dismiss the toast by clicking
-      type: type, // Set the style ('success' or 'error')
-
+      location: 'top-right',
+      icon: true,
+      type: type,
     });
-
   }
 
   // --- Cleanup ---

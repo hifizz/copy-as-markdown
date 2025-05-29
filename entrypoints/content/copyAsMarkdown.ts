@@ -1,6 +1,7 @@
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { isElementHoverable } from './dom-handler';
+import { logger } from '../../utils/logger';
 import { UIManager } from './ui';
 import {
   addPreElementRule,
@@ -35,13 +36,13 @@ const markdownCopier = (() => {
 
   // Define the cancellation trigger function
   function triggerClearSelection(): void {
-    console.log('[copyAsMarkdown] Cancellation triggered by UI (X button).');
+    logger.info('[copyAsMarkdown] Cancellation triggered by UI (X button).');
     clearSelectionAndListeners(); // Call the main cleanup logic
   }
 
   // Define the repick trigger function
   function triggerRepick(): void {
-    console.log('[copyAsMarkdown] Repick triggered by UI (↺ button).');
+    logger.info('[copyAsMarkdown] Repick triggered by UI (↺ button).');
     // Clear current selection UI and listeners *before* starting new selection
     clearSelectionAndListeners();
     // Start selection mode again
@@ -51,10 +52,10 @@ const markdownCopier = (() => {
   // === Turndown Setup & Rules (Internal Helpers) ===
   function initializeTurndownService(): boolean {
     if (isTurndownInitialized) {
-      // console.log('CopyAsMarkdown: Turndown service already initialized.');
+      // logger.info('CopyAsMarkdown: Turndown service already initialized.');
       return true;
     }
-    console.log('CopyAsMarkdown: Attempting to initialize TurndownService...');
+    logger.info('CopyAsMarkdown: Attempting to initialize TurndownService...');
     try {
       turndownService = new TurndownService({
         codeBlockStyle: 'fenced',
@@ -62,7 +63,7 @@ const markdownCopier = (() => {
         hr: '---',
         bulletListMarker: '-',
       });
-      console.log('CopyAsMarkdown: TurndownService instantiated successfully.');
+      logger.info('CopyAsMarkdown: TurndownService instantiated successfully.');
 
       // Add rules by calling imported functions
       addPreElementRule(turndownService);
@@ -73,13 +74,15 @@ const markdownCopier = (() => {
       turndownService.use(gfm);
       addLinkedImageRule(turndownService);
 
-      console.log('CopyAsMarkdown: Turndown rules and GFM plugin applied successfully.');
+      logger.info('CopyAsMarkdown: Turndown rules and GFM plugin applied successfully.');
       isTurndownInitialized = true;
       return true;
     } catch (initError: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Error during TurndownService initialization:',
-        initError instanceof Error ? initError.message : initError
+        {
+          error: initError instanceof Error ? initError.message : initError
+        }
       );
       turndownService = null;
       isTurndownInitialized = false;
@@ -119,9 +122,11 @@ const markdownCopier = (() => {
       // Turndown uses the 'data-cam-skip' attribute via the rules
       markdown = turndownService.turndown(elementToCopy.outerHTML);
     } catch (conversionError: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Turndown conversion failed:',
-        conversionError instanceof Error ? conversionError.message : conversionError
+        {
+          error: conversionError instanceof Error ? conversionError.message : conversionError
+        }
       );
       throw new Error('Markdown conversion failed.'); // Rethrow or handle
     } finally {
@@ -134,9 +139,11 @@ const markdownCopier = (() => {
       await navigator.clipboard.writeText(markdown);
       return markdown; // Resolve with the markdown content
     } catch (clipboardError: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Failed to copy to clipboard:',
-        clipboardError instanceof Error ? clipboardError.message : clipboardError
+        {
+          error: clipboardError instanceof Error ? clipboardError.message : clipboardError
+        }
       );
       throw new Error('Failed to write to clipboard.');
     }
@@ -252,7 +259,7 @@ const markdownCopier = (() => {
 
     // Deactivate selection mode *state*
     selectorActive = false;
-    console.log('[copyAsMarkdown] Selection complete. selectorActive set to false.');
+    logger.info('[copyAsMarkdown] Selection complete. selectorActive set to false.');
 
     // Remove only the listeners related to element picking/hovering
     removePickModeEventListeners(); // Removes mouseover, mouseout, click
@@ -269,14 +276,14 @@ const markdownCopier = (() => {
           !selectedElement.contains(e.target as Node) && // Click is not inside selected element
           (!clickedToolbar || !clickedToolbar.contains(e.target as Node)) // Click is not inside the toolbar
         ) {
-          console.log('[copyAsMarkdown] Click outside detected. Clearing selection.');
+          logger.info('[copyAsMarkdown] Click outside detected. Clearing selection.');
           clearSelectionAndListeners(); // Clean up UI, listeners, and state
         }
       };
 
       boundHandleClickOutside = handleClickOutside.bind(null);
       document.addEventListener('click', boundHandleClickOutside, true);
-      console.log('[copyAsMarkdown] Added click outside listener.');
+      logger.info('[copyAsMarkdown] Added click outside listener.');
     }, 0);
   }
 
@@ -286,11 +293,12 @@ const markdownCopier = (() => {
    * @param {KeyboardEvent} event The keyboard event.
    */
   function handleKeyDown(event: KeyboardEvent): void {
-    console.log(
-      '[copyAsMarkdown] handleKeyDown triggered. Key:',
-      event.key,
-      'selectorActive:',
-      selectorActive
+    logger.info(
+      '[copyAsMarkdown] handleKeyDown triggered.',
+      {
+        key: event.key,
+        selectorActive: selectorActive
+      }
     );
     /**
      * Handle Escape key to stop selection mode
@@ -298,11 +306,11 @@ const markdownCopier = (() => {
     if (event.key === 'Escape') {
       if (selectorActive) {
         // If actively picking, stop the mode completely
-        console.log('[copyAsMarkdown] Escape pressed during active selection. Stopping mode...');
+        logger.info('[copyAsMarkdown] Escape pressed during active selection. Stopping mode...');
         stopSelectionMode(true); // Calls removePickModeEventListeners, removes keydown, calls clearSelectionAndListeners
       } else if (selectedElement) {
         // If an element is already selected (not actively picking), just clear the selection and listeners
-        console.log('[copyAsMarkdown] Escape pressed with element selected. Clearing selection...');
+        logger.info('[copyAsMarkdown] Escape pressed with element selected. Clearing selection...');
         clearSelectionAndListeners(); // Use the helper
       }
     }
@@ -310,7 +318,7 @@ const markdownCopier = (() => {
 
   // Helper to add event listeners for pick mode
   function addPickModeEventListeners(): void {
-    console.log('[copyAsMarkdown] Adding pick mode event listeners...');
+    logger.info('[copyAsMarkdown] Adding pick mode event listeners...');
     // Add non-click listeners immediately
     boundHandleMouseOver = handleMouseOver.bind(null);
     boundHandleMouseOut = handleMouseOut.bind(null);
@@ -322,7 +330,7 @@ const markdownCopier = (() => {
     // Delay adding the click listener
     setTimeout(() => {
       if (selectorActive) {
-        console.log('[copyAsMarkdown] Adding click listener after timeout...');
+        logger.info('[copyAsMarkdown] Adding click listener after timeout...');
         boundHandleClick = handleClick.bind(null);
         document.addEventListener('click', boundHandleClick, true);
       }
@@ -331,7 +339,7 @@ const markdownCopier = (() => {
 
   // Helper to remove ONLY mouse/click pick mode event listeners
   function removePickModeEventListeners(): void {
-    console.log('[copyAsMarkdown] Removing mouse/click pick mode event listeners...');
+    logger.info('[copyAsMarkdown] Removing mouse/click pick mode event listeners...');
     if (boundHandleMouseOver) document.removeEventListener('mouseover', boundHandleMouseOver, true);
     if (boundHandleMouseOut) document.removeEventListener('mouseout', boundHandleMouseOut, true);
     if (boundHandleClick) document.removeEventListener('click', boundHandleClick, true);
@@ -348,7 +356,7 @@ const markdownCopier = (() => {
    */
   function removeClickOutsideListener(): void {
     if (boundHandleClickOutside) {
-      console.log('[copyAsMarkdown] Removing click outside listener.');
+      logger.info('[copyAsMarkdown] Removing click outside listener.');
       document.removeEventListener('click', boundHandleClickOutside, true);
       boundHandleClickOutside = null;
     }
@@ -360,7 +368,7 @@ const markdownCopier = (() => {
    */
   function clearSelectionAndListeners(): void {
     if (selectedElement && uiManager) {
-      console.log('[copyAsMarkdown] Clearing selection UI and listeners for:', selectedElement);
+      logger.info('[copyAsMarkdown] Clearing selection UI and listeners for:', selectedElement);
       uiManager.clearSelectionUI(selectedElement); // Handles restoreStyle and removeButton
     }
     removeClickOutsideListener(); // Ensure listener is removed
@@ -374,7 +382,7 @@ const markdownCopier = (() => {
    */
   function startSelectionMode(): void {
     if (!isTurndownInitialized) {
-      console.warn('CopyAsMarkdown: Turndown not initialized. Attempting init...');
+      logger.warn('CopyAsMarkdown: Turndown not initialized. Attempting init...');
       if (!initializeTurndownService()) {
         alert(
           'CopyAsMarkdown Error: Could not initialize Markdown converter. Cannot start selection mode.'
@@ -384,10 +392,10 @@ const markdownCopier = (() => {
     }
 
     if (selectorActive) {
-      console.log('CopyAsMarkdown: Selection mode already active.');
+      logger.info('CopyAsMarkdown: Selection mode already active.');
       return; // Prevent starting multiple times
     }
-    console.log('CopyAsMarkdown: Activating selection mode...');
+    logger.info('CopyAsMarkdown: Activating selection mode...');
 
     // Clear any previous selection state before starting using UIManager
     if (selectedElement) {
@@ -408,7 +416,7 @@ const markdownCopier = (() => {
     // --- End initial hover ---
 
     addPickModeEventListeners();
-    // console.log('CopyAsMarkdown: Mode activated.');
+    // logger.info('CopyAsMarkdown: Mode activated.');
   }
 
   /**
@@ -416,12 +424,12 @@ const markdownCopier = (() => {
    * Uses cleanup helpers.
    */
   function stopSelectionMode(clearSelection = true): void {
-    console.log(`[copyAsMarkdown] Stopping selection mode (clearSelection: ${clearSelection})...`);
+    logger.info(`[copyAsMarkdown] Stopping selection mode (clearSelection: ${clearSelection})...`);
     removePickModeEventListeners(); // Remove mouse/click listeners
 
     // Explicitly remove keydown listener here as this is a full stop
     if (boundHandleKeyDown) {
-      console.log('[copyAsMarkdown] Removing keydown listener in stopSelectionMode...');
+      logger.info('[copyAsMarkdown] Removing keydown listener in stopSelectionMode...');
       document.removeEventListener('keydown', boundHandleKeyDown, true);
       boundHandleKeyDown = null; // Reset bound handler
     }
@@ -440,7 +448,7 @@ const markdownCopier = (() => {
     if (clearSelection) {
       clearSelectionAndListeners();
     }
-    console.log('[copyAsMarkdown] Mode stopped.');
+    logger.info('[copyAsMarkdown] Mode stopped.');
   }
 
   /**
@@ -451,7 +459,7 @@ const markdownCopier = (() => {
    */
   async function copyHtmlAsMarkdown(htmlString: string): Promise<void> {
     if (!isTurndownInitialized) {
-      console.warn('CopyAsMarkdown: Turndown not initialized. Attempting init...');
+      logger.warn('CopyAsMarkdown: Turndown not initialized. Attempting init...');
       if (!initializeTurndownService()) {
         throw new Error('Turndown service could not be initialized for direct copy.');
       }
@@ -461,15 +469,17 @@ const markdownCopier = (() => {
       throw new Error('Turndown service is not available after initialization attempt.');
     }
 
-    console.log('CopyAsMarkdown: Converting provided HTML...');
+    logger.info('CopyAsMarkdown: Converting provided HTML...');
     let markdown = '';
     try {
       // No preprocessing needed for direct HTML string
       markdown = turndownService.turndown(htmlString);
     } catch (conversionError: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Turndown conversion failed for HTML string:',
-        conversionError instanceof Error ? conversionError.message : conversionError
+        {
+          error: conversionError instanceof Error ? conversionError.message : conversionError
+        }
       );
       throw new Error('Markdown conversion failed.');
     }
@@ -477,12 +487,14 @@ const markdownCopier = (() => {
     // Copy to clipboard
     try {
       await navigator.clipboard.writeText(markdown);
-      console.log('CopyAsMarkdown: HTML successfully copied as Markdown.');
+      logger.info('CopyAsMarkdown: HTML successfully copied as Markdown.');
       // Optionally: Show a brief success notification (e.g., using a temporary overlay)
     } catch (clipboardError: unknown) {
-      console.error(
+      logger.error(
         'CopyAsMarkdown: Failed to copy HTML to clipboard:',
-        clipboardError instanceof Error ? clipboardError.message : clipboardError
+        {
+          error: clipboardError instanceof Error ? clipboardError.message : clipboardError
+        }
       );
       throw new Error('Failed to write to clipboard.');
     }
@@ -498,7 +510,7 @@ const markdownCopier = (() => {
       uiManager.showToast(message, type);
     } else {
       // Fallback if UI manager somehow not ready (shouldn't happen in normal flow)
-      console.warn('UIManager not available for toast:', message);
+      logger.warn('UIManager not available for toast:', {message});
       alert(message); // Basic alert fallback
     }
   }
@@ -528,19 +540,19 @@ const markdownCopier = (() => {
         isElementHoverable(initialElement) && // Assuming isElementHoverable is accessible
         initialElement !== document.body
       ) {
-          console.log(
+          logger.info(
             '[copyAsMarkdown] Applying initial hover via auto-hover:',
             initialElement
           );
           uiManager?.applyStyle(initialElement, 'hover');
           currentHoverElement = initialElement; // Update the class property
       } else {
-        console.log(
+        logger.info(
           '[copyAsMarkdown] No suitable initial element found for auto-hover near viewport center.'
         );
       }
     } catch (e) {
-      console.warn('[copyAsMarkdown] Error during auto-hover attempt:', e);
+      logger.warn('[copyAsMarkdown] Error during auto-hover attempt:', {error: e});
     }
   }
 

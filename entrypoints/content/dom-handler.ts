@@ -3,6 +3,8 @@
  * extracted from copyAsMarkdown.ts.
  */
 
+import { logger } from "../../utils/logger";
+
 // === Visibility & Style Checks ===
 
 /**
@@ -74,9 +76,11 @@ export function getUserSelectValue(element: Element): string {
       style.getPropertyValue('user-select') || style.userSelect || style.webkitUserSelect || ''
     ).trim();
   } catch (err: unknown) {
-    console.warn(
+    logger.warn(
       'CopyAsMarkdown: Error getting userSelect value:',
-      err instanceof Error ? err.message : err,
+      {
+        error: err instanceof Error ? err.message : err
+      }
     );
     return '';
   }

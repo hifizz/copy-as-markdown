@@ -12,7 +12,11 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "butteruptoasts": "^2.0.1",
@@ -26,8 +30,11 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.2",
     "@types/turndown": "^5.0.5",
+    "@vitest/ui": "^3.1.4",
     "@wxt-dev/module-react": "^1.1.3",
+    "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
+    "vitest": "^3.1.4",
     "wxt": "^0.20.2"
   }
 }

@@ -1,5 +1,4 @@
-import { getUserSelectValue } from './dom-handler'; // Needed for skip check
-// Import constants for data attributes
+import { getUserSelectValue } from './dom-handler';
 import {
   DATA_ATTR_SKIP,
   DATA_ATTR_INVISIBLE,

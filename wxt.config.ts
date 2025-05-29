@@ -28,4 +28,10 @@ export default defineConfig({
       },
     },
   },
+  webExt: {
+    startUrls: [
+      'https://wxt.dev/',
+      'https://developer.chrome.com/docs/extensions'
+    ],
+  }
 });

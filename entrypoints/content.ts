@@ -2,6 +2,7 @@
 import { defineContentScript } from '#imports';
 // Import the utility object from the refactored file
 import { markdownUtils } from './content/copyAsMarkdown';
+import { logger } from '../utils/logger';
 
 
 // Store the shortcut string received from the background script
@@ -10,15 +11,15 @@ let currentShortcutCopy = '';
 export default defineContentScript({
   matches: ['<all_urls>'], // Modify matches as needed
   main() {
-    console.log('Content script loaded.');
+    logger.info('Content script loaded.');
 
     // Initialize the markdown utilities (specifically Turndown) once
     markdownUtils.init();
-    console.log('Markdown utils initialized.');
+    logger.info('Markdown utils initialized.');
 
     // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
-      console.log('Message received in content script:', message);
+      logger.info('Message received in content script:', message);
 
       // Store/Update the shortcut string if received
       if (message?.shortcutCopy) {
@@ -29,7 +30,7 @@ export default defineContentScript({
 
       // Handle 'startSelection'
       if (message && message.action === 'startSelection') {
-        console.log('Starting selection mode via context menu...');
+        logger.info('Starting selection mode via context menu...');
         markdownUtils.startSelectionMode();
         sendResponse({ status: 'selectionModeStarted' });
         return true; // Indicate async response potentially needed (though not used here)
@@ -37,15 +38,15 @@ export default defineContentScript({
       }
       // Handle 'copySelection' - Now smarter!
       else if (message && message.action === 'copySelection') {
-        console.log('Handling copy action...');
+        logger.info('Handling copy action...');
 
         // --- Check for element selected by Picker first ---
         const selectedPickerElement = markdownUtils.getSelectedElement();
         if (selectedPickerElement) {
-          console.log('Picker element found, copying it...', selectedPickerElement);
+          logger.info('Picker element found, copying it...', selectedPickerElement);
           markdownUtils.copyElementAsMarkdown(selectedPickerElement)
             .then((markdown) => {
-              console.log('Picker element copied successfully.');
+              logger.info('Picker element copied successfully.');
               markdownUtils.showToast('Copied Element as Markdown', 'success');
               markdownUtils.clearSelection();
               sendResponse({ status: 'elementCopied' });
@@ -62,7 +63,7 @@ export default defineContentScript({
 
         // --- If no Picker element, fallback to text selection ---
         else {
-          console.log('No picker element found, attempting to copy text selection...');
+          logger.info('No picker element found, attempting to copy text selection...');
           const selection = window.getSelection();
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
@@ -73,7 +74,7 @@ export default defineContentScript({
             if (selectedHtml) {
               markdownUtils.copyHtmlAsMarkdown(selectedHtml)
                 .then(() => {
-                  console.log('Text selection copied successfully.');
+                  logger.info('Text selection copied successfully.');
                   markdownUtils.showToast('Copied Selection as Markdown', 'success'); // Use unified toast
                   sendResponse({ status: 'selectionCopied' });
                 })
@@ -99,10 +100,10 @@ export default defineContentScript({
       }
 
       // If message is not handled
-      console.log('Unhandled message action:', message?.action);
+      logger.info('Unhandled message action:', message?.action);
       return false; // Indicate sync response (or no response)
     });
 
-    console.log('Message listener added.');
+    logger.info('Message listener added.');
   },
 });

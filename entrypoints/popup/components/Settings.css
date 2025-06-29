@@ -1,0 +1,328 @@
+/* 设置页面覆盖层 */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: settingsOverlayFadeIn 0.2s ease-out;
+}
+
+@keyframes settingsOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 设置容器 */
+.settings-container {
+  width: 100%;
+  height: 100%;
+  background: var(--popup-bg);
+  border: var(--popup-border);
+  box-shadow: var(--popup-shadow);
+  overflow: hidden;
+  animation: settingsSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes settingsSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 设置标题栏 */
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--divider-color);
+  background: var(--popup-overlay);
+  flex-shrink: 0;
+}
+
+.settings-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--section-label-color);
+  margin: 0;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--section-label-color);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+
+.settings-close:hover {
+  background: var(--menu-button-hover-bg);
+}
+
+/* 设置内容 */
+.settings-content {
+  padding: 8px 12px;
+  max-height: 100%;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* 设置区域 */
+.settings-section:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--section-label-color);
+  margin: 0 0 3px 0;
+}
+
+.settings-section-desc {
+  font-size: 11px;
+  color: var(--section-label-color);
+  opacity: 0.7;
+  margin: 0 0 10px 0;
+}
+
+/* 主题网格 */
+.theme-grid,
+.color-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* 主题选项 */
+.theme-option,
+.color-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--divider-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.theme-option:hover,
+.color-option:hover {
+  border-color: var(--hover-border);
+  background: var(--popup-overlay);
+}
+
+.theme-option.active,
+.color-option.active {
+  border-color: #3B82F6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* 主题预览 */
+.theme-preview,
+.color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--divider-color);
+  flex-shrink: 0;
+}
+
+/* 工具栏主题预览 */
+.toolbar-light {
+  background: linear-gradient(45deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.toolbar-dark {
+  background: linear-gradient(45deg, #2F3437 0%, #1F2937 100%);
+}
+
+
+
+/* 选择配色预览 */
+.selection-classic {
+  background: linear-gradient(45deg, rgba(76, 175, 80, 0.8) 0%, rgba(76, 175, 80, 0.4) 100%);
+}
+
+.selection-elegant {
+  background: linear-gradient(45deg, rgba(16, 185, 129, 0.8) 0%, rgba(16, 185, 129, 0.4) 100%);
+}
+
+.selection-professional {
+  background: linear-gradient(45deg, rgba(59, 130, 246, 0.8) 0%, rgba(59, 130, 246, 0.4) 100%);
+}
+
+.selection-warm {
+  background: linear-gradient(45deg, rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0.4) 100%);
+}
+
+.selection-modern {
+  background: linear-gradient(45deg, rgba(139, 92, 246, 0.8) 0%, rgba(139, 92, 246, 0.4) 100%);
+}
+
+.selection-neutral {
+  background: linear-gradient(45deg, rgba(107, 114, 128, 0.8) 0%, rgba(107, 114, 128, 0.4) 100%);
+}
+
+/* 主题信息 */
+.theme-info,
+.color-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.theme-name,
+.color-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--section-label-color);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theme-desc,
+.color-desc {
+  font-size: 10px;
+  color: var(--section-label-color);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 选中标记 */
+.theme-check,
+.color-check {
+  color: #3B82F6;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* 底部说明 */
+.settings-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--divider-color);
+  background: var(--popup-overlay);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 恢复按钮 */
+.reset-button {
+  background: var(--popup-bg);
+  border: 1px solid var(--divider-color);
+  color: var(--section-label-color);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: center;
+}
+
+.reset-button:hover {
+  background: var(--popup-overlay);
+  border-color: var(--hover-border);
+}
+
+.reset-button:active {
+  transform: scale(0.98);
+}
+
+.settings-note {
+  font-size: 10px;
+  color: var(--section-label-color);
+  opacity: 0.6;
+  margin: 0;
+  text-align: center;
+}
+
+/* 加载状态 */
+.settings-loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--section-label-color);
+  font-size: 12px;
+}
+
+/* 高对比度支持 */
+@media (prefers-contrast: high) {
+  .theme-option,
+  .color-option {
+    border-width: 2px;
+  }
+
+  .theme-option.active,
+  .color-option.active {
+    border-color: #1D4ED8;
+    background: rgba(29, 78, 216, 0.1);
+  }
+}
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  .settings-overlay,
+  .settings-container,
+  .theme-option,
+  .color-option,
+  .settings-close {
+    animation: none;
+    transition: none;
+  }
+}

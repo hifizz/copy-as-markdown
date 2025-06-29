@@ -1,8 +1,10 @@
 // @ts-ignore - WXT types might not be picked up correctly by static analysis
 import { defineContentScript } from '#imports';
+import { browser } from 'wxt/browser';
 // Import the utility object from the refactored file
 import { markdownUtils } from './content/copyAsMarkdown';
 import { logger } from '../utils/logger';
+import { themeManager, selectionColorManager } from './content/ui';
 
 
 // Store the shortcut string received from the background script
@@ -10,15 +12,30 @@ let currentShortcutCopy = '';
 
 export default defineContentScript({
   matches: ['<all_urls>'], // Modify matches as needed
-  main() {
+  async main() {
     logger.info('Content script loaded.');
 
     // Initialize the markdown utilities (specifically Turndown) once
     markdownUtils.init();
     logger.info('Markdown utils initialized.');
 
+    // Load theme settings from storage
+    try {
+      const result = await browser.storage.sync.get(['toolbarTheme', 'selectionColor']);
+      if (result.toolbarTheme) {
+        themeManager.setTheme(result.toolbarTheme);
+        logger.info('Loaded toolbar theme:', result.toolbarTheme);
+      }
+      if (result.selectionColor) {
+        selectionColorManager.setScheme(result.selectionColor);
+        logger.info('Loaded selection color:', result.selectionColor);
+      }
+    } catch (error) {
+      logger.logError(error, { component: 'ContentScript', action: 'loadThemeSettings' });
+    }
+
     // Listen for messages from the background script
-    chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
+    browser.runtime.onMessage.addListener((message: any, sender: any, sendResponse: (response?: any) => void): boolean | undefined => {
       logger.info('Message received in content script:', message);
 
       // Store/Update the shortcut string if received
@@ -99,8 +116,22 @@ export default defineContentScript({
         }
       }
 
+      // Handle theme settings
+      else if (message && message.type === 'SET_TOOLBAR_THEME') {
+        logger.info('Setting toolbar theme:', message.theme);
+        themeManager.setTheme(message.theme);
+        sendResponse({ status: 'themeUpdated' });
+        return false;
+      }
+      else if (message && message.type === 'SET_SELECTION_COLOR') {
+        logger.info('Setting selection color:', message.color);
+        selectionColorManager.setScheme(message.color);
+        sendResponse({ status: 'colorUpdated' });
+        return false;
+      }
+
       // If message is not handled
-      logger.info('Unhandled message action:', message?.action);
+      logger.info('Unhandled message action:', message?.action || message?.type);
       return false; // Indicate sync response (or no response)
     });
 

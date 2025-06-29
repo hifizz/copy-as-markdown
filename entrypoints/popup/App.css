@@ -5,6 +5,76 @@
   padding: 0;
 }
 
+/* 浅色主题变量 */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: rgba(255, 255, 255, 0);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+
+  --popup-bg: rgba(255, 255, 255, 0.95);
+  --popup-overlay: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%);
+  --popup-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  --popup-border: 1px solid rgba(255, 255, 255, 0.2);
+  --section-label-color: #6b7280;
+  --divider-color: #e5e7eb;
+}
+
+/* 浅色主题变量 */
+:root {
+  --menu-button-hover-bg: rgba(0, 0, 0, 0.05);
+  --menu-button-active-bg: rgba(0, 0, 0, 0.1);
+  --menu-button-focus-bg: rgba(107, 114, 128, 0.1);
+  --menu-button-focus-ring: rgba(107, 114, 128, 0.3);
+  --menu-button-text-primary: #1f2937;
+  --menu-button-text-secondary: #6b7280;
+  --menu-button-primary-hover-bg: rgba(107, 114, 128, 0.1);
+  --menu-button-spinner-bg: rgba(0, 0, 0, 0.2);
+  --menu-button-spinner-fg: #6b7280;
+  --menu-button-copying-bg: rgba(245, 158, 11, 0.1);
+  --menu-button-copying-text: #d97706;
+  --menu-button-success-bg: rgba(16, 185, 129, 0.1);
+  --menu-button-success-text: #059669;
+  --menu-button-error-bg: rgba(239, 68, 68, 0.1);
+  --menu-button-error-text: #dc2626;
+  --hover-border: rgba(0, 0, 0, 0.2);
+}
+
+/* 暗色主题变量 */
+.dark {
+  --menu-button-hover-bg: rgba(255, 255, 255, 0.08);
+  --menu-button-active-bg: rgba(255, 255, 255, 0.12);
+  --menu-button-focus-bg: rgba(156, 163, 175, 0.2);
+  --menu-button-focus-ring: rgba(156, 163, 175, 0.4);
+  --menu-button-text-primary: #f9fafb;
+  --menu-button-text-secondary: #9ca3af;
+  --menu-button-primary-hover-bg: rgba(156, 163, 175, 0.2);
+  --menu-button-spinner-bg: rgba(255, 255, 255, 0.3);
+  --menu-button-spinner-fg: #9ca3af;
+  --menu-button-copying-bg: rgba(245, 158, 11, 0.2);
+  --menu-button-copying-text: #fbbf24;
+  --menu-button-success-bg: rgba(16, 185, 129, 0.2);
+  --menu-button-success-text: #34d399;
+  --menu-button-error-bg: rgba(239, 68, 68, 0.2);
+  --menu-button-error-text: #f87171;
+  --hover-border: rgba(255, 255, 255, 0.1);
+}
+
+
 body {
   margin: 0;
   display: flex;
@@ -24,6 +94,7 @@ body {
   max-height: 600px;
   overflow: hidden;
 }
+
 
 /* Popup 容器 */
 .popup-container {
@@ -65,6 +136,15 @@ body {
   gap: 2px;
 }
 
+/* 弹窗头部 */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  padding-right: 4px;
+}
+
 /* 区域标签 */
 .section-label {
   font-size: 11px;
@@ -72,9 +152,25 @@ body {
   color: var(--section-label-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 8px 12px 4px 12px;
-  margin-bottom: 2px;
   opacity: 0.8;
+  margin: 0;
+}
+
+/* 设置按钮 */
+.settings-button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  opacity: 0.7;
+}
+
+.settings-button:hover {
+  background: var(--menu-button-hover-bg);
+  opacity: 1;
 }
 
 /* 分隔线 */
@@ -83,35 +179,6 @@ body {
   background: var(--divider-color);
   margin: 6px 8px;
   opacity: 0.3;
-}
-
-/* 浅色主题变量 */
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: rgba(255, 255, 255, 0);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-
-  --popup-bg: rgba(255, 255, 255, 0.95);
-  --popup-overlay: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 100%);
-  --popup-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-  --popup-border: 1px solid rgba(255, 255, 255, 0.2);
-  --section-label-color: #6b7280;
-  --divider-color: #e5e7eb;
 }
 
 /* 暗色主题变量 */

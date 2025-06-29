@@ -2,6 +2,7 @@ import butterup from 'butteruptoasts';
 // In your CSS or JavaScript file
 import 'butteruptoasts/src/butterup.css';
 import { TOOLBAR_TEXT_COPY_BASE } from './constants'; // Import base text constant
+import { logger } from '../../utils/logger';
 
 butterup.options.maxToasts = 1;
 butterup.options.toastLife = 3000;
@@ -157,7 +158,7 @@ type ThemeType = 'light' | 'dark' | 'auto';
 
 class ThemeManager {
   private static readonly THEMES: Record<string, ThemeColors> = {
-    // 专业蓝色系 - 仿照 Notion、Obsidian 等效率软件
+    // 经典白色主题
     light: {
       toolbarBg: '#FFFFFF', // 纯白背景
       toolbarText: '#37352F', // 深灰色文字
@@ -165,42 +166,13 @@ class ThemeManager {
       toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05)',
       toolbarBorder: '1px solid rgba(0, 0, 0, 0.1)',
     },
+    // 经典深色主题
     dark: {
       toolbarBg: '#2F3437', // 深灰背景
       toolbarText: '#FFFFFF', // 白色文字
       buttonHover: 'rgba(255, 255, 255, 0.1)', // 白色悬停
       toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2)',
       toolbarBorder: '1px solid rgba(255, 255, 255, 0.1)',
-    },
-    // 蓝色专业系 - 仿照 Linear、Raycast 等
-    professional: {
-      toolbarBg: '#F8FAFC', // 极浅蓝灰
-      toolbarText: '#0F172A', // 深蓝灰
-      buttonHover: 'rgba(15, 23, 42, 0.08)',
-      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
-      toolbarBorder: '1px solid rgba(15, 23, 42, 0.08)',
-    },
-    midnight: {
-      toolbarBg: '#0F172A', // 深蓝灰
-      toolbarText: '#F1F5F9', // 浅蓝灰
-      buttonHover: 'rgba(241, 245, 249, 0.1)',
-      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3)',
-      toolbarBorder: '1px solid rgba(241, 245, 249, 0.1)',
-    },
-    // 紫色创新系 - 仿照 Discord、Arc 等
-    purple: {
-      toolbarBg: '#FAFAFA', // 浅灰白
-      toolbarText: '#1A1A1A', // 深灰
-      buttonHover: 'rgba(26, 26, 26, 0.08)',
-      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
-      toolbarBorder: '1px solid rgba(139, 92, 246, 0.2)', // 紫色边框
-    },
-    violet: {
-      toolbarBg: '#1E1B4B', // 深紫
-      toolbarText: '#E0E7FF', // 浅紫
-      buttonHover: 'rgba(224, 231, 255, 0.1)',
-      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3)',
-      toolbarBorder: '1px solid rgba(224, 231, 255, 0.15)',
     },
   };
 

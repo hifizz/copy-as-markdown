@@ -17,8 +17,9 @@ export default defineConfig({
     permissions: [
       "contextMenus",
       "tabs",
+      "storage", // Add storage permission for theme settings
       // "commands", // WXT might add this automatically when commands are defined
-      // Add other necessary permissions if needed, e.g., "storage"
+      // Add other necessary permissions if needed
       // WXT usually adds "scripting" automatically for content scripts
     ],
     // Define keyboard shortcuts

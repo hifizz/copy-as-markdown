@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { browser } from 'wxt/browser';
 import { MenuButton } from './components/MenuButton';
+import { Settings } from './components/Settings';
 import { useTabCopy } from './hooks/useTabCopy';
 import './App.css';
 
@@ -8,6 +9,7 @@ function App() {
   const { copyActiveTab, copyAllTabs } = useTabCopy();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [tabCount, setTabCount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
 
   // 检测系统主题
   useEffect(() => {
@@ -111,6 +113,20 @@ function App() {
   return (
     <div className={`popup-container ${isDarkMode ? 'dark' : 'light'}`}>
       <div className="popup-menu">
+        {/* 设置按钮 */}
+        <div className="menu-section">
+          <div className="popup-header">
+            <div className="section-label">Copy as Markdown</div>
+            <button
+              className="settings-button"
+              onClick={() => setShowSettings(true)}
+              title="主题设置"
+            >
+              ⚙️
+            </button>
+          </div>
+        </div>
+
         {/* 高频功能区 */}
         <div className="menu-section">
           <div className="section-label">常用功能</div>
@@ -172,6 +188,11 @@ function App() {
           />
         </div>
       </div>
+
+      {/* 设置页面 */}
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }

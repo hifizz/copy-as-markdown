@@ -17,18 +17,270 @@ const SELECTED_BG_COLOR = 'rgba(76, 175, 80, 0.4)'; // Darker green overlay
 const HOVER_OUTLINE = '1px solid rgba(76, 175, 80, 0.6)'; // Thin, semi-transparent outline for hover
 const SELECTED_OUTLINE = '2px solid rgba(76, 175, 80, 0.9)'; // Thicker, more solid outline for selected
 const VIEWPORT_MARGIN = 10; // Safety margin from viewport edges in pixels
-const CANCEL_BUTTON_HOVER_BG = 'rgba(255, 255, 255, 0.1)';
-const REPICK_BUTTON_HOVER_BG = 'rgba(255, 255, 255, 0.1)'; // Same as cancel for now
+const MAX_Z_INDEX = '2147483647'; // Use constant for z-index
 
-// Toolbar Styles (Tailwind-inspired)
-const TOOLBAR_BG = '#2D3748'; // Gray-800
-const TOOLBAR_TEXT = '#E2E8F0'; // Gray-300
-const TOOLBAR_PADDING = '6px 12px';
-const TOOLBAR_RADIUS = '4px';
-const TOOLBAR_SHADOW = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+// === Selection Color Management System ===
+
+interface SelectionColors {
+  hoverBg: string;
+  selectedBg: string;
+  hoverOutline: string;
+  selectedOutline: string;
+  name: string;
+  description: string;
+}
+
+class SelectionColorManager {
+  private static readonly SELECTION_SCHEMES: Record<string, SelectionColors> = {
+    // 经典绿色 - 当前使用的配色
+    classic: {
+      hoverBg: 'rgba(76, 175, 80, 0.2)',
+      selectedBg: 'rgba(76, 175, 80, 0.4)',
+      hoverOutline: '1px solid rgba(76, 175, 80, 0.6)',
+      selectedOutline: '2px solid rgba(76, 175, 80, 0.9)',
+      name: '经典绿色',
+      description: '传统的绿色选择高亮，表示确认和选择'
+    },
+
+    // 优雅绿色 - 更现代的绿色
+    elegant: {
+      hoverBg: 'rgba(16, 185, 129, 0.15)',
+      selectedBg: 'rgba(16, 185, 129, 0.25)',
+      hoverOutline: '1px solid rgba(16, 185, 129, 0.5)',
+      selectedOutline: '2px solid rgba(16, 185, 129, 0.8)',
+      name: '优雅绿色',
+      description: '现代化的翠绿色，更柔和优雅'
+    },
+
+    // 专业蓝色 - 与工具栏主题一致
+    professional: {
+      hoverBg: 'rgba(59, 130, 246, 0.15)',
+      selectedBg: 'rgba(59, 130, 246, 0.25)',
+      hoverOutline: '1px solid rgba(59, 130, 246, 0.5)',
+      selectedOutline: '2px solid rgba(59, 130, 246, 0.8)',
+      name: '专业蓝色',
+      description: '专业的蓝色，与工具栏主题保持一致'
+    },
+
+    // 温和橙色 - 高可见性但不刺眼
+    warm: {
+      hoverBg: 'rgba(245, 158, 11, 0.15)',
+      selectedBg: 'rgba(245, 158, 11, 0.25)',
+      hoverOutline: '1px solid rgba(245, 158, 11, 0.5)',
+      selectedOutline: '2px solid rgba(245, 158, 11, 0.8)',
+      name: '温和橙色',
+      description: '温暖的橙色，高可见性且不刺眼'
+    },
+
+    // 现代紫色 - 创新感
+    modern: {
+      hoverBg: 'rgba(139, 92, 246, 0.15)',
+      selectedBg: 'rgba(139, 92, 246, 0.25)',
+      hoverOutline: '1px solid rgba(139, 92, 246, 0.5)',
+      selectedOutline: '2px solid rgba(139, 92, 246, 0.8)',
+      name: '现代紫色',
+      description: '现代的紫色，富有创新感'
+    },
+
+    // 中性灰色 - 最低调优雅
+    neutral: {
+      hoverBg: 'rgba(107, 114, 128, 0.15)',
+      selectedBg: 'rgba(107, 114, 128, 0.25)',
+      hoverOutline: '1px solid rgba(107, 114, 128, 0.5)',
+      selectedOutline: '2px solid rgba(107, 114, 128, 0.8)',
+      name: '中性灰色',
+      description: '最低调的灰色，极简优雅'
+    }
+  };
+
+  private currentScheme: string = 'elegant'; // 默认使用优雅绿色
+
+  /**
+   * 设置选择配色方案
+   */
+  setScheme(scheme: string): void {
+    if (SelectionColorManager.SELECTION_SCHEMES[scheme]) {
+      this.currentScheme = scheme;
+      logger.info('[SelectionColorManager] Selection color scheme set to:', { scheme });
+    } else {
+      logger.warn('[SelectionColorManager] Unknown selection color scheme:', { scheme });
+    }
+  }
+
+  /**
+   * 获取当前配色方案
+   */
+  getCurrentScheme(): SelectionColors {
+    return SelectionColorManager.SELECTION_SCHEMES[this.currentScheme] ||
+           SelectionColorManager.SELECTION_SCHEMES.elegant;
+  }
+
+  /**
+   * 获取当前配色方案名称
+   */
+  getCurrentSchemeName(): string {
+    return this.currentScheme;
+  }
+
+  /**
+   * 获取所有可用的配色方案
+   */
+  static getAvailableSchemes(): Record<string, SelectionColors> {
+    return { ...SelectionColorManager.SELECTION_SCHEMES };
+  }
+
+  /**
+   * 添加自定义配色方案
+   */
+  static addScheme(name: string, colors: SelectionColors): void {
+    SelectionColorManager.SELECTION_SCHEMES[name] = colors;
+  }
+}
+
+// 创建全局选择配色管理器实例
+const selectionColorManager = new SelectionColorManager();
+
+// 导出选择配色管理器
+export { selectionColorManager, SelectionColorManager };
+
+// === Theme Management System ===
+
+interface ThemeColors {
+  toolbarBg: string;
+  toolbarText: string;
+  buttonHover: string;
+  toolbarShadow: string;
+  toolbarBorder: string;
+}
+
+type ThemeType = 'light' | 'dark' | 'auto';
+
+class ThemeManager {
+  private static readonly THEMES: Record<string, ThemeColors> = {
+    // 专业蓝色系 - 仿照 Notion、Obsidian 等效率软件
+    light: {
+      toolbarBg: '#FFFFFF', // 纯白背景
+      toolbarText: '#37352F', // 深灰色文字
+      buttonHover: 'rgba(55, 53, 47, 0.08)', // 浅灰悬停
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05)',
+      toolbarBorder: '1px solid rgba(0, 0, 0, 0.1)',
+    },
+    dark: {
+      toolbarBg: '#2F3437', // 深灰背景
+      toolbarText: '#FFFFFF', // 白色文字
+      buttonHover: 'rgba(255, 255, 255, 0.1)', // 白色悬停
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2)',
+      toolbarBorder: '1px solid rgba(255, 255, 255, 0.1)',
+    },
+    // 蓝色专业系 - 仿照 Linear、Raycast 等
+    professional: {
+      toolbarBg: '#F8FAFC', // 极浅蓝灰
+      toolbarText: '#0F172A', // 深蓝灰
+      buttonHover: 'rgba(15, 23, 42, 0.08)',
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+      toolbarBorder: '1px solid rgba(15, 23, 42, 0.08)',
+    },
+    midnight: {
+      toolbarBg: '#0F172A', // 深蓝灰
+      toolbarText: '#F1F5F9', // 浅蓝灰
+      buttonHover: 'rgba(241, 245, 249, 0.1)',
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3)',
+      toolbarBorder: '1px solid rgba(241, 245, 249, 0.1)',
+    },
+    // 紫色创新系 - 仿照 Discord、Arc 等
+    purple: {
+      toolbarBg: '#FAFAFA', // 浅灰白
+      toolbarText: '#1A1A1A', // 深灰
+      buttonHover: 'rgba(26, 26, 26, 0.08)',
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+      toolbarBorder: '1px solid rgba(139, 92, 246, 0.2)', // 紫色边框
+    },
+    violet: {
+      toolbarBg: '#1E1B4B', // 深紫
+      toolbarText: '#E0E7FF', // 浅紫
+      buttonHover: 'rgba(224, 231, 255, 0.1)',
+      toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3)',
+      toolbarBorder: '1px solid rgba(224, 231, 255, 0.15)',
+    },
+  };
+
+  private currentTheme: ThemeType = 'auto';
+
+  /**
+   * 设置主题
+   * @param theme 主题类型：'light' | 'dark' | 'auto' | 自定义主题名
+   */
+  setTheme(theme: ThemeType | string): void {
+    this.currentTheme = theme as ThemeType;
+  }
+
+  /**
+   * 获取当前主题名称
+   */
+  getCurrentThemeName(): string {
+    if (this.currentTheme === 'auto') {
+      return this.detectSystemTheme();
+    }
+    return this.currentTheme;
+  }
+
+  /**
+   * 检测系统主题
+   */
+  private detectSystemTheme(): 'light' | 'dark' {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  }
+
+  /**
+   * 获取当前主题的颜色配置
+   */
+  getCurrentThemeColors(): ThemeColors {
+    const themeName = this.getCurrentThemeName();
+    return ThemeManager.THEMES[themeName] || ThemeManager.THEMES.light;
+  }
+
+  /**
+   * 添加新主题
+   * @param name 主题名称
+   * @param colors 主题颜色配置
+   */
+  static addTheme(name: string, colors: ThemeColors): void {
+    ThemeManager.THEMES[name] = colors;
+  }
+
+  /**
+   * 获取所有可用主题列表
+   */
+  static getAvailableThemes(): string[] {
+    return Object.keys(ThemeManager.THEMES);
+  }
+
+  /**
+   * 检查主题是否存在
+   */
+  static hasTheme(name: string): boolean {
+    return name in ThemeManager.THEMES;
+  }
+}
+
+// 创建全局主题管理器实例
+const themeManager = new ThemeManager();
+
+// 向后兼容的辅助函数
+function getThemeColors(): ThemeColors {
+  return themeManager.getCurrentThemeColors();
+}
+
+// 导出主题管理器供外部使用
+export { themeManager, ThemeManager };
+
+// Toolbar Styles (Updated for theme compatibility)
+const TOOLBAR_PADDING = '8px 12px'; // Slightly more padding for better visual balance
+const TOOLBAR_RADIUS = '6px'; // Slightly more rounded for modern look
 const TOOLBAR_FONT_SIZE = '13px';
 const TOOLBAR_TRANSITION = 'opacity 0.2s ease-out, transform 0.2s ease-out';
-const MAX_Z_INDEX = '2147483647'; // Use constant for z-index
 
 // === Types ===
 type CopyFunction = (element: Element) => Promise<string>;
@@ -51,6 +303,8 @@ function createCopyToolbarDOM(
   repickSpan: HTMLSpanElement;
   cancelSpan: HTMLSpanElement;
 } {
+  const themeColors = getThemeColors();
+
   const toolbarDiv = document.createElement('div');
   const textSpan = document.createElement('span');
   const repickSpan = document.createElement('span');
@@ -68,21 +322,25 @@ function createCopyToolbarDOM(
   repickSpan.textContent = '↺';
   repickSpan.title = repickTooltip;
   Object.assign(repickSpan.style, {
-    padding: '2px 6px',
+    padding: '4px 8px',
     margin: '0 4px',
     borderRadius: '4px',
     cursor: 'pointer',
     transition: 'background-color 0.15s ease-in-out',
+    fontSize: '14px',
+    fontWeight: '500',
   } as Partial<CSSStyleDeclaration>);
 
   // --- Configure Cancel Span ---
   cancelSpan.textContent = '✕';
   cancelSpan.title = cancelTooltip;
   Object.assign(cancelSpan.style, {
-    padding: '2px 6px',
+    padding: '4px 8px',
     borderRadius: '4px',
     cursor: 'pointer',
     transition: 'background-color 0.15s ease-in-out',
+    fontSize: '12px',
+    fontWeight: '500',
   } as Partial<CSSStyleDeclaration>);
 
   // --- Configure Toolbar Div ---
@@ -91,10 +349,10 @@ function createCopyToolbarDOM(
   toolbarDiv.appendChild(cancelSpan);
   Object.assign(toolbarDiv.style, {
     padding: TOOLBAR_PADDING,
-    background: TOOLBAR_BG,
-    color: TOOLBAR_TEXT,
+    background: themeColors.toolbarBg,
+    color: themeColors.toolbarText,
     borderRadius: TOOLBAR_RADIUS,
-    boxShadow: TOOLBAR_SHADOW,
+    boxShadow: themeColors.toolbarShadow,
     fontSize: TOOLBAR_FONT_SIZE,
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -102,6 +360,9 @@ function createCopyToolbarDOM(
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
+    fontWeight: '500',
+        backdropFilter: 'blur(8px)', // Add subtle blur effect
+    border: themeColors.toolbarBorder,
   } as Partial<CSSStyleDeclaration>);
 
   return { toolbarDiv, textSpan, repickSpan, cancelSpan };
@@ -164,8 +425,9 @@ export class UIManager {
 
   applyStyle(element: HTMLElement, styleType: 'hover' | 'selected'): void {
     this.storeStyle(element);
-    const bgColor = styleType === 'hover' ? HOVER_BG_COLOR : SELECTED_BG_COLOR;
-    const outlineStyle = styleType === 'hover' ? HOVER_OUTLINE : SELECTED_OUTLINE;
+    const selectionColors = selectionColorManager.getCurrentScheme();
+    const bgColor = styleType === 'hover' ? selectionColors.hoverBg : selectionColors.selectedBg;
+    const outlineStyle = styleType === 'hover' ? selectionColors.hoverOutline : selectionColors.selectedOutline;
 
     element.style.backgroundColor = bgColor;
     element.style.outline = outlineStyle;
@@ -297,9 +559,10 @@ export class UIManager {
     const targetRect = targetElement.getBoundingClientRect();
     const position = this._calculateButtonPosition(targetRect, toolbarWidth, toolbarHeight);
 
-    // 5. Add listeners
+    // 5. Add listeners with theme-aware hover colors
+    const themeColors = getThemeColors();
     this.repickSpan.addEventListener('mouseenter', () => {
-      if (this.repickSpan) this.repickSpan.style.backgroundColor = REPICK_BUTTON_HOVER_BG;
+      if (this.repickSpan) this.repickSpan.style.backgroundColor = themeColors.buttonHover;
     });
     this.repickSpan.addEventListener('mouseleave', () => {
       if (this.repickSpan) this.repickSpan.style.backgroundColor = 'transparent';
@@ -307,7 +570,7 @@ export class UIManager {
     this.repickSpan.addEventListener('click', this.handleRepickButtonClick);
 
     this.cancelSpan.addEventListener('mouseenter', () => {
-      if (this.cancelSpan) this.cancelSpan.style.backgroundColor = CANCEL_BUTTON_HOVER_BG;
+      if (this.cancelSpan) this.cancelSpan.style.backgroundColor = themeColors.buttonHover;
     });
     this.cancelSpan.addEventListener('mouseleave', () => {
       if (this.cancelSpan) this.cancelSpan.style.backgroundColor = 'transparent';

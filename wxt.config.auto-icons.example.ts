@@ -1,27 +1,22 @@
 import { defineConfig } from 'wxt';
 
-// See https://wxt.dev/api/config.html
+// 方案二：使用 @wxt-dev/auto-icons 模块的配置示例
 export default defineConfig({
-  modules: ['@wxt-dev/module-react'],
+    modules: [
+    '@wxt-dev/module-react',
+    '@wxt-dev/auto-icons'  // 添加 auto-icons 模块
+  ],
+
   manifest: {
     name: 'Copy as Markdown',
-    // 图标配置 - 基础方案：使用深色主题图标
-    icons: {
-      '16': '/icon/dark_16.png',
-      '32': '/icon/dark_32.png',
-      '48': '/icon/dark_48.png',
-      '96': '/icon/dark_96.png',
-      '128': '/icon/dark_128.png',
-    },
-    // Explicitly add permissions here if auto-detection fails
+    // 使用 auto-icons 时，不需要手动配置 icons
+    // 模块会自动处理图标生成和配置
+
     permissions: [
       "contextMenus",
       "tabs",
-      // "commands", // WXT might add this automatically when commands are defined
-      // Add other necessary permissions if needed, e.g., "storage"
-      // WXT usually adds "scripting" automatically for content scripts
     ],
-    // Define keyboard shortcuts
+
     commands: {
       'copy-selection-as-markdown': {
         suggested_key: {
@@ -37,6 +32,7 @@ export default defineConfig({
       },
     },
   },
+
   webExt: {
     startUrls: [
       'https://wxt.dev/',

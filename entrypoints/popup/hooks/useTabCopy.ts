@@ -5,6 +5,7 @@ import {
   formatTabAsMarkdownLink,
   formatTabsAsMarkdownList
 } from '../../../utils/tabs';
+import { i18n } from '../../../utils/i18n';
 import logger from '../../../utils/logger';
 
 /**
@@ -22,17 +23,17 @@ export const useTabCopy = () => {
       const activeTab = await getCurrentActiveTab();
 
       if (!activeTab) {
-        logger.warn('未找到活跃标签页', { component: 'popup', action: 'copyActiveTab' });
-        throw new Error('未找到活跃标签页');
+        logger.warn(i18n('error.noActiveTab'), { component: 'popup', action: 'copyActiveTab' });
+        throw new Error(i18n('error.noActiveTab'));
       }
 
       if (!activeTab.url || activeTab.url.startsWith('chrome://') || activeTab.url.startsWith('chrome-extension://')) {
-        logger.warn('无法复制系统页面', {
+        logger.warn(i18n('error.cannotCopySystemPage'), {
           component: 'popup',
           action: 'copyActiveTab',
           url: activeTab.url
         });
-        throw new Error('无法复制系统页面');
+        throw new Error(i18n('error.cannotCopySystemPage'));
       }
 
       const markdownLink = formatTabAsMarkdownLink(activeTab);
@@ -62,8 +63,8 @@ export const useTabCopy = () => {
       const tabs = await getCurrentWindowTabs();
 
       if (tabs.length === 0) {
-        logger.warn('未找到标签页', { component: 'popup', action: 'copyAllTabs' });
-        throw new Error('未找到标签页');
+        logger.warn(i18n('error.noTabsFound'), { component: 'popup', action: 'copyAllTabs' });
+        throw new Error(i18n('error.noTabsFound'));
       }
 
       // 过滤掉系统页面
@@ -74,12 +75,12 @@ export const useTabCopy = () => {
       );
 
       if (validTabs.length === 0) {
-        logger.warn('没有有效的标签页可复制', {
+        logger.warn(i18n('error.noValidTabs'), {
           component: 'popup',
           action: 'copyAllTabs',
           totalTabs: tabs.length
         });
-        throw new Error('没有有效的标签页可复制');
+        throw new Error(i18n('error.noValidTabs'));
       }
 
       const markdownList = formatTabsAsMarkdownList(validTabs);

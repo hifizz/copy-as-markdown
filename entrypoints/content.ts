@@ -5,6 +5,8 @@ import { browser } from 'wxt/browser';
 import { markdownUtils } from './content/copyAsMarkdown';
 import { logger } from '../utils/logger';
 import { themeManager, selectionColorManager } from './content/ui';
+import { initI18n } from '../utils/i18n';
+import { registerAllLanguagePackages } from '../locales';
 
 
 // Store the shortcut string received from the background script
@@ -14,6 +16,15 @@ export default defineContentScript({
   matches: ['<all_urls>'], // Modify matches as needed
   async main() {
     logger.info('Content script loaded.');
+
+    // Initialize i18n system
+    try {
+      registerAllLanguagePackages();
+      await initI18n();
+      logger.info('i18n system initialized.');
+    } catch (error) {
+      logger.logError(error, { component: 'ContentScript', action: 'initI18n' });
+    }
 
     // Initialize the markdown utilities (specifically Turndown) once
     markdownUtils.init();
@@ -128,6 +139,29 @@ export default defineContentScript({
         selectionColorManager.setScheme(message.color);
         sendResponse({ status: 'colorUpdated' });
         return false;
+      }
+            // Handle language settings
+      else if (message && message.type === 'SET_LANGUAGE') {
+        logger.info('Setting language:', message.language);
+
+        // 异步处理语言切换
+        (async () => {
+          try {
+            // 引入 setLanguage 函数
+            const { setLanguage } = await import('../utils/i18n');
+            await setLanguage(message.language);
+
+            // 语言设置已更新，UI 将在下次创建时使用新语言
+            logger.info('Language updated successfully, UI will use new language on next creation');
+
+            sendResponse({ status: 'languageUpdated' });
+          } catch (error) {
+            logger.logError(error, { component: 'ContentScript', action: 'setLanguage' });
+            sendResponse({ status: 'languageUpdateFailed', error: String(error) });
+          }
+        })();
+
+        return true; // 表示异步响应
       }
 
       // If message is not handled

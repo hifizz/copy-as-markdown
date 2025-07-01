@@ -1,8 +1,8 @@
 import butterup from 'butteruptoasts';
 // In your CSS or JavaScript file
 import 'butteruptoasts/src/butterup.css';
-import { TOOLBAR_TEXT_COPY_BASE } from './constants'; // Import base text constant
 import { logger } from '../../utils/logger';
+import { i18n } from '../../utils/i18n';
 
 butterup.options.maxToasts = 1;
 butterup.options.toastLife = 3000;
@@ -32,67 +32,70 @@ interface SelectionColors {
 }
 
 class SelectionColorManager {
-  private static readonly SELECTION_SCHEMES: Record<string, SelectionColors> = {
-    // 经典绿色 - 当前使用的配色
-    classic: {
-      hoverBg: 'rgba(76, 175, 80, 0.2)',
-      selectedBg: 'rgba(76, 175, 80, 0.4)',
-      hoverOutline: '1px solid rgba(76, 175, 80, 0.6)',
-      selectedOutline: '2px solid rgba(76, 175, 80, 0.9)',
-      name: '经典绿色',
-      description: '传统的绿色选择高亮，表示确认和选择'
-    },
+  // 获取选择配色方案（动态生成以支持多语言）
+  private static getSelectionSchemes(): Record<string, SelectionColors> {
+    return {
+      // 经典绿色 - 当前使用的配色
+      classic: {
+        hoverBg: 'rgba(76, 175, 80, 0.2)',
+        selectedBg: 'rgba(76, 175, 80, 0.4)',
+        hoverOutline: '1px solid rgba(76, 175, 80, 0.6)',
+        selectedOutline: '2px solid rgba(76, 175, 80, 0.9)',
+        name: i18n('content.selectionSchemes.classic.name'),
+        description: i18n('content.selectionSchemes.classic.description')
+      },
 
-    // 优雅绿色 - 更现代的绿色
-    elegant: {
-      hoverBg: 'rgba(16, 185, 129, 0.15)',
-      selectedBg: 'rgba(16, 185, 129, 0.25)',
-      hoverOutline: '1px solid rgba(16, 185, 129, 0.5)',
-      selectedOutline: '2px solid rgba(16, 185, 129, 0.8)',
-      name: '优雅绿色',
-      description: '现代化的翠绿色，更柔和优雅'
-    },
+      // 优雅绿色 - 更现代的绿色
+      elegant: {
+        hoverBg: 'rgba(16, 185, 129, 0.15)',
+        selectedBg: 'rgba(16, 185, 129, 0.25)',
+        hoverOutline: '1px solid rgba(16, 185, 129, 0.5)',
+        selectedOutline: '2px solid rgba(16, 185, 129, 0.8)',
+        name: i18n('content.selectionSchemes.elegant.name'),
+        description: i18n('content.selectionSchemes.elegant.description')
+      },
 
-    // 专业蓝色 - 与工具栏主题一致
-    professional: {
-      hoverBg: 'rgba(59, 130, 246, 0.15)',
-      selectedBg: 'rgba(59, 130, 246, 0.25)',
-      hoverOutline: '1px solid rgba(59, 130, 246, 0.5)',
-      selectedOutline: '2px solid rgba(59, 130, 246, 0.8)',
-      name: '专业蓝色',
-      description: '专业的蓝色，与工具栏主题保持一致'
-    },
+      // 专业蓝色 - 与工具栏主题一致
+      professional: {
+        hoverBg: 'rgba(59, 130, 246, 0.15)',
+        selectedBg: 'rgba(59, 130, 246, 0.25)',
+        hoverOutline: '1px solid rgba(59, 130, 246, 0.5)',
+        selectedOutline: '2px solid rgba(59, 130, 246, 0.8)',
+        name: i18n('content.selectionSchemes.professional.name'),
+        description: i18n('content.selectionSchemes.professional.description')
+      },
 
-    // 温和橙色 - 高可见性但不刺眼
-    warm: {
-      hoverBg: 'rgba(245, 158, 11, 0.15)',
-      selectedBg: 'rgba(245, 158, 11, 0.25)',
-      hoverOutline: '1px solid rgba(245, 158, 11, 0.5)',
-      selectedOutline: '2px solid rgba(245, 158, 11, 0.8)',
-      name: '温和橙色',
-      description: '温暖的橙色，高可见性且不刺眼'
-    },
+      // 温和橙色 - 高可见性但不刺眼
+      warm: {
+        hoverBg: 'rgba(245, 158, 11, 0.15)',
+        selectedBg: 'rgba(245, 158, 11, 0.25)',
+        hoverOutline: '1px solid rgba(245, 158, 11, 0.5)',
+        selectedOutline: '2px solid rgba(245, 158, 11, 0.8)',
+        name: i18n('content.selectionSchemes.warm.name'),
+        description: i18n('content.selectionSchemes.warm.description')
+      },
 
-    // 现代紫色 - 创新感
-    modern: {
-      hoverBg: 'rgba(139, 92, 246, 0.15)',
-      selectedBg: 'rgba(139, 92, 246, 0.25)',
-      hoverOutline: '1px solid rgba(139, 92, 246, 0.5)',
-      selectedOutline: '2px solid rgba(139, 92, 246, 0.8)',
-      name: '现代紫色',
-      description: '现代的紫色，富有创新感'
-    },
+      // 现代紫色 - 创新感
+      modern: {
+        hoverBg: 'rgba(139, 92, 246, 0.15)',
+        selectedBg: 'rgba(139, 92, 246, 0.25)',
+        hoverOutline: '1px solid rgba(139, 92, 246, 0.5)',
+        selectedOutline: '2px solid rgba(139, 92, 246, 0.8)',
+        name: i18n('content.selectionSchemes.modern.name'),
+        description: i18n('content.selectionSchemes.modern.description')
+      },
 
-    // 中性灰色 - 最低调优雅
-    neutral: {
-      hoverBg: 'rgba(107, 114, 128, 0.15)',
-      selectedBg: 'rgba(107, 114, 128, 0.25)',
-      hoverOutline: '1px solid rgba(107, 114, 128, 0.5)',
-      selectedOutline: '2px solid rgba(107, 114, 128, 0.8)',
-      name: '中性灰色',
-      description: '最低调的灰色，极简优雅'
-    }
-  };
+      // 中性灰色 - 最低调优雅
+      neutral: {
+        hoverBg: 'rgba(107, 114, 128, 0.15)',
+        selectedBg: 'rgba(107, 114, 128, 0.25)',
+        hoverOutline: '1px solid rgba(107, 114, 128, 0.5)',
+        selectedOutline: '2px solid rgba(107, 114, 128, 0.8)',
+        name: i18n('content.selectionSchemes.neutral.name'),
+        description: i18n('content.selectionSchemes.neutral.description')
+      }
+    };
+  }
 
   private currentScheme: string = 'elegant'; // 默认使用优雅绿色
 
@@ -100,7 +103,8 @@ class SelectionColorManager {
    * 设置选择配色方案
    */
   setScheme(scheme: string): void {
-    if (SelectionColorManager.SELECTION_SCHEMES[scheme]) {
+    const schemes = SelectionColorManager.getSelectionSchemes();
+    if (schemes[scheme]) {
       this.currentScheme = scheme;
       logger.info('[SelectionColorManager] Selection color scheme set to:', { scheme });
     } else {
@@ -112,8 +116,8 @@ class SelectionColorManager {
    * 获取当前配色方案
    */
   getCurrentScheme(): SelectionColors {
-    return SelectionColorManager.SELECTION_SCHEMES[this.currentScheme] ||
-           SelectionColorManager.SELECTION_SCHEMES.elegant;
+    const schemes = SelectionColorManager.getSelectionSchemes();
+    return schemes[this.currentScheme] || schemes.elegant;
   }
 
   /**
@@ -127,14 +131,15 @@ class SelectionColorManager {
    * 获取所有可用的配色方案
    */
   static getAvailableSchemes(): Record<string, SelectionColors> {
-    return { ...SelectionColorManager.SELECTION_SCHEMES };
+    return { ...SelectionColorManager.getSelectionSchemes() };
   }
 
   /**
    * 添加自定义配色方案
    */
   static addScheme(name: string, colors: SelectionColors): void {
-    SelectionColorManager.SELECTION_SCHEMES[name] = colors;
+    // 注意：由于使用动态生成，此方法暂不支持添加自定义方案
+    logger.warn('[SelectionColorManager] Adding custom schemes not supported with dynamic generation');
   }
 }
 
@@ -158,19 +163,19 @@ type ThemeType = 'light' | 'dark' | 'auto';
 
 class ThemeManager {
   private static readonly THEMES: Record<string, ThemeColors> = {
-    // 经典白色主题
+    // 经典白色主题 - Pure white background
     light: {
-      toolbarBg: '#FFFFFF', // 纯白背景
-      toolbarText: '#37352F', // 深灰色文字
-      buttonHover: 'rgba(55, 53, 47, 0.08)', // 浅灰悬停
+      toolbarBg: '#FFFFFF', // Pure white background
+      toolbarText: '#37352F', // Dark gray text
+      buttonHover: 'rgba(55, 53, 47, 0.08)', // Light gray hover
       toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05)',
       toolbarBorder: '1px solid rgba(0, 0, 0, 0.1)',
     },
-    // 经典深色主题
+    // 经典深色主题 - Dark gray background
     dark: {
-      toolbarBg: '#2F3437', // 深灰背景
-      toolbarText: '#FFFFFF', // 白色文字
-      buttonHover: 'rgba(255, 255, 255, 0.1)', // 白色悬停
+      toolbarBg: '#2F3437', // Dark gray background
+      toolbarText: '#FFFFFF', // White text
+      buttonHover: 'rgba(255, 255, 255, 0.1)', // White hover
       toolbarShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2)',
       toolbarBorder: '1px solid rgba(255, 255, 255, 0.1)',
     },
@@ -502,10 +507,10 @@ export class UIManager {
     this.selectedElementRef = targetElement;
 
     // 1. Create DOM elements using the helper
-    const repickTooltip = 'Repick element';
-    const cancelTooltip = 'Cancel selection (or press Esc / click outside)';
+    const repickTooltip = i18n('content.toolbar.repick');
+    const cancelTooltip = i18n('content.toolbar.cancel');
     const { toolbarDiv, textSpan, repickSpan, cancelSpan } = createCopyToolbarDOM(
-      TOOLBAR_TEXT_COPY_BASE,
+      i18n('content.toolbar.copy'),
       this.copyShortcutString,
       repickTooltip,
       cancelTooltip
@@ -640,7 +645,7 @@ export class UIManager {
     try {
       const copiedText = await this.copyHandler(this.selectedElementRef);
       this.updateButtonState('copied');
-      this.showToast('Copied to clipboard!', 'success');
+      this.showToast(i18n('content.toast.copiedToClipboard'), 'success');
     } catch (err: unknown) {
       logger.error(
         'CopyAsMarkdown: Copy process failed via UI:',
@@ -649,8 +654,8 @@ export class UIManager {
         }
       );
       const errorMessage = err instanceof Error ? err.message : String(err);
-      this.updateButtonState('error', 'Error!');
-      this.showToast(`Copy failed: ${errorMessage}`, 'error');
+      this.updateButtonState('error', i18n('content.toolbar.error'));
+      this.showToast(`${i18n('content.toast.copyFailed')}: ${errorMessage}`, 'error');
     } finally {
       setTimeout(() => {
         if (this.copyToolbar === toolbar) {
@@ -682,18 +687,18 @@ export class UIManager {
       case 'idle':
         this.textSpan.textContent =
           text ||
-          `${TOOLBAR_TEXT_COPY_BASE}${
+          `${i18n('content.toolbar.copy')}${
             this.copyShortcutString ? ` (${this.copyShortcutString})` : ''
           }`;
         break;
       case 'copying':
-        this.textSpan.textContent = 'Copying...';
+        this.textSpan.textContent = i18n('content.toolbar.copying');
         break;
       case 'copied':
-        this.textSpan.textContent = 'Copied!';
+        this.textSpan.textContent = i18n('content.toolbar.copied');
         break;
       case 'error':
-        this.textSpan.textContent = text || 'Error!';
+        this.textSpan.textContent = text || i18n('content.toolbar.error');
         break;
     }
   }
@@ -709,7 +714,7 @@ export class UIManager {
     const toastDuration = duration ?? defaultDuration;
 
     butterup.toast({
-      title: type === 'success' ? 'Success!' : 'Error!',
+      title: type === 'success' ? i18n('content.toast.success') : i18n('content.toast.error'),
       message: message,
       location: 'top-right',
       icon: true,

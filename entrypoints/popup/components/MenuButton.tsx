@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { i18n } from '../../../utils/i18n';
 import './MenuButton.css';
 
 export interface MenuButtonProps {
@@ -55,7 +56,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({
         setTimeout(() => setStatus('idle'), 1500);
       }
     } catch (error) {
-      console.error('操作失败:', error);
+      console.error(i18n('state.error'), error);
       setStatus('error');
       setTimeout(() => setStatus('idle'), 1500);
     }

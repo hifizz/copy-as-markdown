@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { i18n } from '../../../utils/i18n';
 import './CopyButton.css';
 
 export interface CopyButtonProps {
@@ -49,7 +50,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
         setTimeout(() => setStatus('idle'), 2000);
       }
     } catch (error) {
-      console.error('复制失败:', error);
+      console.error(i18n('state.failed'), error);
       setStatus('error');
       setTimeout(() => setStatus('idle'), 2000);
     }
@@ -58,11 +59,11 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   const getButtonText = () => {
     switch (status) {
       case 'copying':
-        return '复制中...';
+        return i18n('state.copying');
       case 'success':
-        return '已复制!';
+        return i18n('state.copied');
       case 'error':
-        return '复制失败';
+        return i18n('state.failed');
       default:
         return children;
     }

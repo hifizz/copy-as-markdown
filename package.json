@@ -1,9 +1,36 @@
 {
   "name": "copy-as-markdown-tools",
-  "description": "manifest.json description",
+  "description": "精准选取网页元素，快速转换为 Markdown 格式的专业工具 - A professional tool for precise web element selection and fast Markdown conversion",
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "keywords": [
+    "chrome-extension",
+    "markdown",
+    "copy",
+    "converter",
+    "web-extension",
+    "html-to-markdown",
+    "productivity",
+    "writing-tools",
+    "element-picker",
+    "text-selection",
+    "shortcuts",
+    "context-menu",
+    "precision-copying"
+  ],
+  "author": {
+    "name": "Copy as Markdown Tools Team"
+  },
+  "license": "MIT",
+  "homepage": "https://cam.zilin.im",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hifizz/copy-as-markdown.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hifizz/copy-as-markdown/issues"
+  },
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",

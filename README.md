@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Copy as Markdown demo](public/preview.png)
-
 ![Copy as Markdown](public/icon/dark_128.png)
 
 **精准选取网页元素，快速转换为 Markdown 格式的专业工具**
@@ -16,6 +14,7 @@
 
 [English](#english) | [中文文档](#中文文档)
 
+![Copy as Markdown demo](public/preview.png)
 </div>
 
 ## 中文文档
@@ -80,15 +79,9 @@ Copy as Markdown 专注于精准的局部内容复制，提供四大核心功能
 
 #### 通过 Chrome Web Store（推荐）
 
-1. 访问 [Chrome Web Store](#)
+1. 访问 [Chrome Web Store 「待发布到商店」](#)
 2. 点击"添加至 Chrome"
 3. 确认安装权限
-
-#### 通过官方网站
-
-1. 访问 [官方网站](https://cam.zilin.im)
-2. 下载最新版本
-3. 按照安装指南操作
 
 #### 开发者模式安装
 
